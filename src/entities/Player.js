@@ -41,10 +41,10 @@ export class Player {
       let vx = 0, vy = 0, speed = GAME_CONFIG.player.walkSpeed, moving = false;
       const jl = joy ? Math.hypot(joy.x, joy.y) : 0;
       if (!this.locked || this.anim !== 'build') {
-        if (jl > 0.15) { this.path = null; const m = Math.min(1, jl); vx = joy.x / jl * m; vy = joy.y / jl * m; speed = m > 0.85 ? GAME_CONFIG.player.runSpeed : GAME_CONFIG.player.walkSpeed * Math.max(0.5, m); moving = true; }
+        if (jl > 0.15) { this.path = null; vx = joy.x / jl; vy = joy.y / jl; speed = GAME_CONFIG.player.runSpeed; moving = true; /* luôn chạy hết tốc độ, rê nhẹ cũng không đi chậm */ }
         else if (this.path) {
           const n = this.path[0], dx = n.x + 0.5 - this.x, dy = n.y + 0.5 - this.y, d = Math.hypot(dx, dy);
-          if (d < 0.12) { this.path.shift(); if (!this.path.length) this.path = null; } else { vx = dx / d; vy = dy / d; speed = this.path.length > 8 ? GAME_CONFIG.player.runSpeed : GAME_CONFIG.player.walkSpeed; moving = true; }
+          if (d < 0.12) { this.path.shift(); if (!this.path.length) this.path = null; } else { vx = dx / d; vy = dy / d; speed = GAME_CONFIG.player.runSpeed; moving = true; }
         }
         if (moving) {
           const ox = this.x, oy = this.y, s = speed * dt;
@@ -55,7 +55,7 @@ export class Player {
             this.stuckT = Math.hypot(this.x - ox, this.y - oy) < speed * dt * 0.2 ? this.stuckT + dt : 0;
             if (this.stuckT > 0.4) { this.path = null; this.stuckT = 0; }
           }
-          if (!this.locked) this.play(speed > GAME_CONFIG.player.walkSpeed + 0.1 ? 'run' : 'walk');
+          if (!this.locked) this.play('run');
         } else if (!this.locked) this.play('idle');
       }
     }
