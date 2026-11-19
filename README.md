@@ -1,30 +1,54 @@
-# SURVIVAL TOWER DEFENSE (Godot 4.3, Android)
+# Survival Tower Defense
 
-Build APK **chỉ bằng GitHub Actions**. Mỗi giai đoạn đều ra APK chơi được.
+Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Lộ trình
-| Giai đoạn | Nội dung | Trạng thái |
-|---|---|---|
-| 1 | Bản đồ seed 100x100, Map ID, nhân vật, joystick, chạm để đi | Đã làm |
-| 2 | Slime, cổng sinh quái, FlowField tìm đường, 3 HP, đợt quái cơ bản, màn thua | **Bản này** (chưa kiểm chứng trên máy) |
-| 3 | Tháp cung tên, xây (kéo-thả, kiểm tra chặn đường), nâng cấp, bán, 3 nhánh kỹ năng | Chưa |
-| 4 | Vàng + cân bằng, 100 đợt đầy đủ, 2 kỹ năng nhân vật, minimap, màn thắng/thống kê | Chưa |
-| 5 | Multiplayer server-authoritative, phòng, mã phòng, link mời | Chưa |
-| 6 | Pixel art thật, animation, âm thanh, lưu tiến trình, tối ưu, chất lượng đồ họa | Chưa |
+## Trạng thái hiện tại: Giai đoạn 1 (v0.1)
 
-Hiện tại: đồ họa là placeholder vẽ bằng code; chưa có tháp nên slime chưa thể bị tiêu diệt (chế độ sống sót);
-chưa có minimap, vàng, kỹ năng, âm thanh, lưu game, multiplayer, thắng trận ở đợt 100.
+| Hạng mục | Trạng thái |
+|---|---|
+| Bản đồ 100x100 theo Map ID, kích thước cấu hình được (40–400) | ✅ có test tự động |
+| Sinh địa hình: cây/đá theo cụm (Cellular Automata + Noise), sông cong (Random Walk) có bến cạn, đất trống, bụi cây | ✅ |
+| Hậu xử lý + kiểm tra: không vùng cô lập, 8 cổng đều nối tới trung tâm, lối đi ≥ 2 ô, mật độ vật cản | ✅ 300 seed pass |
+| Map ID tái tạo chính xác, có phiên bản thuật toán (`edition`) | ✅ |
+| Nhân vật nông dân + animation đứng/đi/chạy/xây/bị đánh/chết, màu áo tùy chọn, tên | ✅ (xây/bị đánh/chết chỉ xem được bằng phím debug, chưa có gameplay gọi) |
+| Điều khiển: chạm để đi (A*), joystick ảo đa điểm, WASD khi chạy trên máy tính | ✅ (chưa thử trên thiết bị thật) |
+| Va chạm với cây/đá/sông, Y-sorting, minimap, lưu tên/màu áo, vùng an toàn tai thỏ | ✅ (chưa thử trên thiết bị thật) |
+| Slime, AI, 100 đợt, tháp, vàng, kỹ năng, 3 nhánh tháp, minimap tương tác | ⏳ Giai đoạn 2–4 |
+| Multiplayer, server, phòng, link mời | ⏳ Giai đoạn 5 |
+| Âm thanh, tạm dừng, lưu tiến trình, màn thắng/thua | ⏳ chưa làm |
 
-## Build và tải APK
-1. Push code lên nhánh `main` (hoặc Actions -> Build APK -> Run workflow).
-2. APK nằm ở **Releases -> "Bản build mới nhất"** (tải thẳng về điện thoại) và ở Artifacts của lần chạy.
-3. APK debug dùng keystore cố định `ci/debug.keystore` (khóa công khai, chỉ để thử, không dùng cho Google Play),
-   nên cài đè bản mới không cần gỡ bản cũ.
-4. Workflow dừng build nếu phát hiện lỗi GDScript lúc import, để không tạo APK hỏng.
+Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi trái/phải, chưa có mặt sau); nước chưa có animation; đồ họa đang vẽ bằng code (có thể thay bằng sprite sheet thật, giữ nguyên key/kích thước ở `src/render`).
 
-## Chạy trên PC
-Mở `project.godot` bằng Godot 4.3, F5. Phím mũi tên hoặc click để đi.
+## Chạy thử
+```bash
+npm install
+npm test          # kiểm thử bản đồ, Map ID, A*
+npm run dev       # mở URL hiển thị (mở bằng điện thoại cùng Wi-Fi để thử cảm ứng)
+```
+Thêm `?debug=1` vào URL để bật phím dev: `H` bị đánh, `B` xây, `K` chết.
+
+## Build APK
+**Bằng GitHub (khuyến nghị):** đẩy code lên nhánh `main` → tab *Actions* → workflow *Build Android APK* → tải artifact `survival-tower-defense-debug-apk` → cài file `.apk` (bật "cài từ nguồn không rõ"). APK này là bản **debug**; bản release cần keystore (chưa cấu hình).
+
+**Trên máy:** cần Node 20, JDK 17, Android SDK.
+```bash
+npm run build && npx cap add android && npx cap sync android
+cd android && ./gradlew assembleDebug   # APK: android/app/build/outputs/apk/debug/
+```
+
+## Map ID
+`FOREST-2026-A8F72K` = `chủ đề`-`phiên bản thuật toán`-`seed`; kích thước khác 100 thì thêm hậu tố, ví dụ `FOREST-2026-A8F72K-150`.
+Cùng ID cho đúng cùng bản đồ trên mọi thiết bị. **Không sửa** `src/map/generators/forest2026.js` sau khi phát hành; muốn đổi thuật toán hãy thêm `forest2027.js` và đăng ký trong `generators/index.js`.
 
 ## Cấu trúc
-`scripts/core` · `map_generation` · `pathfinding` (A*, FlowField) · `player` · `monsters` · `waves` · `ui` · `game`.
-`tests/` là test headless chạy tay khi cần (không chạy trên GitHub).
+```
+src/core/      rng/noise tất định, heap, A*
+src/config/    cấu hình chung, chủ đề (themes/)
+src/map/       tiles, mapId, generators/ (theo phiên bản), validate, grid, gates
+src/render/    texture pixel art, sprite nông dân
+src/entities/  Player
+src/input/     Joystick
+src/scenes/    GameScene (thế giới), UIScene (joystick, minimap)
+tests/         kiểm thử tự động
+```
+Thêm chủ đề mới: tạo `config/themes/<ten>.js`, đăng ký trong `themes/index.js` và `map/generators/index.js`.

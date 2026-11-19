@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#1b2a1b" />
+<title>Survival Tower Defense</title>
+<style>
+  :root { color-scheme: dark; --bg:#1b2a1b; --panel:#24382a; --ink:#f2f5ee; --accent:#e0b13a; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:system-ui,sans-serif; overflow:hidden; touch-action:none; -webkit-user-select:none; user-select:none; }
+  #game { position:fixed; inset:0; } #game canvas { display:block; }
+  #safe-probe { position:fixed; visibility:hidden; pointer-events:none; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #menu { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom)); overflow:auto; touch-action:auto; z-index:10; }
+  #menu[hidden], #hud[hidden] { display:none; }
+  .card { width:min(420px,100%); background:var(--panel); border-radius:14px; padding:20px; display:grid; gap:12px; box-shadow:0 8px 30px #0006; }
+  h1 { margin:0; font-size:22px; letter-spacing:.5px; } label { font-size:13px; opacity:.85; display:grid; gap:6px; }
+  input[type=text] { font:inherit; padding:12px; border-radius:8px; border:1px solid #ffffff30; background:#0003; color:var(--ink); user-select:text; -webkit-user-select:text; }
+  button { font:inherit; padding:12px 14px; border-radius:8px; border:0; background:#ffffff18; color:var(--ink); min-height:44px; }
+  button.primary { background:var(--accent); color:#2b1f06; font-weight:700; }
+  #swatches { display:flex; gap:8px; flex-wrap:wrap; } #swatches button { width:40px; height:40px; min-height:0; padding:0; border-radius:50%; border:3px solid transparent; }
+  #swatches button.sel { border-color:#fff; } .row { display:flex; gap:8px; } .row > * { flex:1; }
+  #err { color:#ff8a80; min-height:1.2em; font-size:13px; } small { opacity:.7; }
+  #hud { position:fixed; z-index:5; left:max(8px,env(safe-area-inset-left)); top:max(8px,env(safe-area-inset-top)); display:flex; gap:6px; align-items:center; background:#0008; padding:4px 6px; border-radius:10px; font-size:12px; touch-action:auto; }
+  #hud button { min-height:34px; padding:4px 10px; font-size:12px; } #hudid { font-family:monospace; }
+</style>
+</head>
+<body>
+<div id="safe-probe"></div>
+<div id="game"></div>
+<div id="hud" hidden><span id="hudid"></span><button id="copy" type="button">Chép mã</button><button id="back" type="button">Menu</button></div>
+<div id="menu">
+  <div class="card">
+    <h1>Survival Tower Defense</h1>
+    <label>Tên nhân vật<input id="name" type="text" autocomplete="off" /></label>
+    <label>Màu áo (cũng là màu của bạn trên minimap)<div id="swatches"></div></label>
+    <label>Mã bản đồ (để trống = ngẫu nhiên)<input id="mapid" type="text" placeholder="FOREST-2026-A8F72K" autocapitalize="characters" autocomplete="off" /></label>
+    <div id="err"></div>
+    <div class="row"><button id="random" type="button">Tạo mã ngẫu nhiên</button><button id="start" class="primary" type="button">Bắt đầu</button></div>
+    <small>Phiên bản 0.1 – Giai đoạn 1: bản đồ, nhân vật, điều khiển. Chưa có quái vật, tháp, multiplayer.</small>
+  </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
