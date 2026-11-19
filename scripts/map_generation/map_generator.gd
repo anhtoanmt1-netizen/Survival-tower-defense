@@ -236,11 +236,13 @@ static func flood(m: MapData, start: Vector2i) -> PackedByteArray:
 		head += 1
 		var cx := cur % m.width
 		var cy := cur / m.width
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var n := Vector2i(cx, cy) + d
-			if m.is_walkable(n) and visited[n.y * m.width + n.x] == 0:
-				visited[n.y * m.width + n.x] = 1
-				queue.append(n.y * m.width + n.x)
+		for k in 4:
+			var nx: int = cx + (1 if k == 0 else (-1 if k == 1 else 0))
+			var ny: int = cy + (1 if k == 2 else (-1 if k == 3 else 0))
+			var n := Vector2i(nx, ny)
+			if m.is_walkable(n) and visited[ny * m.width + nx] == 0:
+				visited[ny * m.width + nx] = 1
+				queue.append(ny * m.width + nx)
 	return visited
 
 
@@ -250,7 +252,7 @@ static func _ensure_connected(m: MapData) -> void:
 	for g in m.gates:
 		if visited[g.y * m.width + g.x] == 0:
 			# Đào hành lang rộng 3 ô từ cổng tới tâm (hình chữ L).
-			var cur := g
+			var cur: Vector2i = g
 			while cur.x != c.x:
 				cur.x += signi(c.x - cur.x)
 				_clear_disc(m, cur, 1)

@@ -5,11 +5,6 @@ extends RefCounted
 ## Dùng đúng quy tắc địa hình MapData.is_blocking_terrain như người chơi.
 
 const UNREACHED := 1000000
-const DIRS8: Array[Vector2i] = [
-	Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
-	Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1),
-]
-
 var width := 0
 var height := 0
 var dist := PackedInt32Array()
@@ -77,17 +72,20 @@ func rebuild(target: Vector2i) -> void:
 
 ## Ô kế tiếp (trong 8 hướng, không cắt góc vật cản) gần mục tiêu nhất. Trả về chính c nếu không có đường tốt hơn.
 func next_step(c: Vector2i) -> Vector2i:
-	var best := c
-	var best_d := dist_at(c)
-	for d in DIRS8:
-		var n := c + d
-		if not walk_at(n):
-			continue
-		if d.x != 0 and d.y != 0:
-			if not walk_at(c + Vector2i(d.x, 0)) or not walk_at(c + Vector2i(0, d.y)):
+	var best: Vector2i = c
+	var best_d: int = dist_at(c)
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if dx == 0 and dy == 0:
 				continue
-		var nd := dist_at(n)
-		if nd < best_d:
-			best_d = nd
-			best = n
+			var n := Vector2i(c.x + dx, c.y + dy)
+			if not walk_at(n):
+				continue
+			if dx != 0 and dy != 0:
+				if not walk_at(Vector2i(c.x + dx, c.y)) or not walk_at(Vector2i(c.x, c.y + dy)):
+					continue  # không cắt góc vật cản
+			var nd: int = dist_at(n)
+			if nd < best_d:
+				best_d = nd
+				best = n
 	return best

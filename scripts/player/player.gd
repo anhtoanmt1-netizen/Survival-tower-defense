@@ -103,7 +103,7 @@ func _move(v: Vector2) -> void:
 
 
 func _collides(p: Vector2) -> bool:
-	for off in [Vector2(-HALF, -HALF), Vector2(HALF, -HALF), Vector2(-HALF, HALF), Vector2(HALF, HALF)]:
+	for off: Vector2 in [Vector2(-HALF, -HALF), Vector2(HALF, -HALF), Vector2(-HALF, HALF), Vector2(HALF, HALF)]:
 		if not map.is_walkable(Vector2i(((p + off) / T).floor())):
 			return true
 	return false

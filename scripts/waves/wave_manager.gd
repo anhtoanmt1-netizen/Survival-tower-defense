@@ -28,8 +28,8 @@ static func speed_for(tier: int, w: int) -> float:
 
 
 static func pick_tier(w: int) -> int:
-	for t in [4, 3, 2, 1]:
-		var p := clampf(float(w - t * 10) / 60.0, 0.0, 0.4)
+	for t: int in [4, 3, 2, 1]:
+		var p: float = clampf(float(w - t * 10) / 60.0, 0.0, 0.4)
 		if randf() < p:
 			return t
 	return 0

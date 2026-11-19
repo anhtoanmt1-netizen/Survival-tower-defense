@@ -7,7 +7,7 @@ const T := GameConfig.TILE_SIZE
 const MAX_ACTIVE := 150
 const FLOW_MIN_INTERVAL := 0.3
 const HIT_DIST_SQ := 169.0  # 13 px
-const TIER_COLORS: Array[Color] = [
+const TIER_COLORS := [
 	Color(0.30, 0.78, 0.30),  # xanh lá  - thường
 	Color(0.30, 0.50, 0.95),  # xanh dương
 	Color(0.62, 0.32, 0.85),  # tím

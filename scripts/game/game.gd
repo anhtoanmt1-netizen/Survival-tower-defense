@@ -58,7 +58,7 @@ func load_map(id: String) -> bool:
 		return false
 	map = m
 	grid_path = GridPath.new(m)
-	for v in [ground, back, front]:
+	for v: MapView in [ground, back, front]:
 		v.map = m
 		v.player = player
 	camera.limit_left = 0
