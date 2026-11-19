@@ -64,6 +64,7 @@ export class GameScene extends Phaser.Scene {
     cam.startFollow(this.player.sprite, true, 0.15, 0.15);
     this.scale.on('resize', this.fitZoom, this); this.fitZoom();
     this.scene.launch('UI', { map, player: this.player, camera: cam, game: this });
+    this.scene.bringToTop('UI'); // UI luôn nằm trên cùng, nhận chạm trước
     this.input.on('pointerdown', this.onTap, this);
     this.input.on('pointermove', (p) => { if (this.placing && p.id === this.placing.id) this.updateGhost(p); });
     this.input.on('pointerup', this.endPlacement, this); this.input.on('pointerupoutside', this.endPlacement, this);

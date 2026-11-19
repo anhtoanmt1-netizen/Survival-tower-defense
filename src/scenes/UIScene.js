@@ -27,7 +27,7 @@ export class UIScene extends Phaser.Scene {
     // Nút XÂY (góc dưới-phải) + thẻ tháp kéo ra bản đồ
     const game = this.d.game;
     this.buildOpen = false; this.cardTxt = '';
-    this.btn = this.add.circle(0, 0, 34, 0xe0b13a, 0.92).setStrokeStyle(3, 0xffffff, 0.7).setScrollFactor(0).setDepth(1000).setInteractive();
+    this.btn = this.add.circle(0, 0, 36, 0xe0b13a, 0.95).setStrokeStyle(4, 0xffffff, 0.9).setScrollFactor(0).setDepth(1000).setInteractive();
     this.btnT = this.add.text(0, 0, 'XÂY', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#2b1f06' }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     this.card = this.add.rectangle(0, 0, 184, 64, 0x14221b, 0.96).setStrokeStyle(2, 0xffffff, 0.5).setScrollFactor(0).setDepth(1000).setVisible(false).setInteractive();
     this.cardT = this.add.text(0, 0, '', { fontFamily: 'sans-serif', fontSize: '13px', color: '#fff', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setVisible(false);

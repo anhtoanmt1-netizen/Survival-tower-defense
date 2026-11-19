@@ -2,7 +2,7 @@
 
 Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Trạng thái hiện tại: Giai đoạn 3 (v0.3)
+## Trạng thái hiện tại: Giai đoạn 3 (v0.3.1 – sửa lỗi nút giao diện bị bản đồ che)
 
 | Hạng mục | Trạng thái |
 |---|---|

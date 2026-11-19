@@ -4,8 +4,8 @@ import { safeInsets } from '../ui/safeArea.js';
 export class Joystick {
   constructor(scene) {
     this.scene = scene; this.vec = new Phaser.Math.Vector2(); this.id = null; this.R = 58; this.cx = 0; this.cy = 0;
-    this.base = scene.add.circle(0, 0, this.R, 0x000000, 0.28).setStrokeStyle(3, 0xffffff, 0.5).setScrollFactor(0).setDepth(1000);
-    this.knob = scene.add.circle(0, 0, this.R * 0.45, 0xffffff, 0.6).setScrollFactor(0).setDepth(1001);
+    this.base = scene.add.circle(0, 0, this.R, 0x000000, 0.38).setStrokeStyle(4, 0xffffff, 0.85).setScrollFactor(0).setDepth(1000);
+    this.knob = scene.add.circle(0, 0, this.R * 0.45, 0xffffff, 0.8).setStrokeStyle(2, 0x000000, 0.4).setScrollFactor(0).setDepth(1001);
     scene.input.on('pointerdown', this.down, this); scene.input.on('pointermove', this.move, this);
     scene.input.on('pointerup', this.up, this); scene.input.on('pointerupoutside', this.up, this);
     this.layout();

@@ -34,8 +34,9 @@ function start() {
     scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' }, input: { activePointers: 3 }, fps: { target: 60 },
     scene: [],
   });
-  game.scene.add('UI', UIScene, false);
+  // Thứ tự thêm = thứ tự vẽ: Game trước (dưới), UI sau (trên cùng). Đảo ngược sẽ làm nút bị bản đồ che mất.
   game.scene.add('Game', GameScene, true, { mapId: id, name: settings.name, shirt: settings.shirt, debug });
+  game.scene.add('UI', UIScene, false);
 }
 function backToMenu() { game?.destroy(true); game = null; ['tpanel', 'skillmodal', 'toast'].forEach((id) => ($(id).hidden = true)); $('hud').hidden = true; $('menu').hidden = false; $('mapid').value = settings.lastMapId || ''; }
 $('start').onclick = start;
