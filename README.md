@@ -1,47 +1,30 @@
 # SURVIVAL TOWER DEFENSE (Godot 4.3, Android)
 
-## Trạng thái (trung thực)
+Build APK **chỉ bằng GitHub Actions**. Mỗi giai đoạn đều ra APK chơi được.
 
-| Hạng mục | Trạng thái |
-|---|---|
-| Project Godot, cấu trúc module | Có (khung ban đầu) |
-| Bản đồ seed-based 100x100 + Map ID có phiên bản | Viết xong, **chưa chạy thử trong Godot** |
-| Kiểm tra di chuyển (không vùng kẹt, 8 cổng nối tâm) | Có trong bản đồ + test, **chưa chạy** |
-| Nhân vật + joystick đa điểm + chạm để đi (A*) | Viết xong, **chưa chạy trên máy** |
-| Đồ họa | **Placeholder vẽ bằng code**, chưa phải pixel art |
-| Slime, AI, tháp, vàng, 100 đợt, kỹ năng, minimap | Chưa làm (Giai đoạn 2-4) |
-| Multiplayer + server | Chưa làm (Giai đoạn 5) |
-| Build APK debug bằng GitHub Actions | Đã cấu hình, **chưa chạy thử** (xem mục Build APK) |
-| Animation đi/chạy/xây/chết, âm thanh, lưu tiến trình | Chưa làm |
+## Lộ trình
+| Giai đoạn | Nội dung | Trạng thái |
+|---|---|---|
+| 1 | Bản đồ seed 100x100, Map ID, nhân vật, joystick, chạm để đi | Đã làm |
+| 2 | Slime, cổng sinh quái, FlowField tìm đường, 3 HP, đợt quái cơ bản, màn thua | **Bản này** (chưa kiểm chứng trên máy) |
+| 3 | Tháp cung tên, xây (kéo-thả, kiểm tra chặn đường), nâng cấp, bán, 3 nhánh kỹ năng | Chưa |
+| 4 | Vàng + cân bằng, 100 đợt đầy đủ, 2 kỹ năng nhân vật, minimap, màn thắng/thống kê | Chưa |
+| 5 | Multiplayer server-authoritative, phòng, mã phòng, link mời | Chưa |
+| 6 | Pixel art thật, animation, âm thanh, lưu tiến trình, tối ưu, chất lượng đồ họa | Chưa |
 
-Chưa làm: kiểm tra "lối đi đủ rộng" (hiện chỉ đảm bảo thông được, có thể có chỗ hẹp 1 ô),
-tai thỏ/safe area, joystick bằng chuột trên PC (PC dùng phím mũi tên + click để đi).
+Hiện tại: đồ họa là placeholder vẽ bằng code; chưa có tháp nên slime chưa thể bị tiêu diệt (chế độ sống sót);
+chưa có minimap, vàng, kỹ năng, âm thanh, lưu game, multiplayer, thắng trận ở đợt 100.
 
-## Chạy thử
-1. Cài Godot 4.3+, mở `project.godot`, bấm F5.
-2. Phím mũi tên hoặc joystick để đi; chạm/click để tự đi tới ô đó.
-3. Nút: Tải ID / Bản đồ mới / Sao chép ID.
+## Build và tải APK
+1. Push code lên nhánh `main` (hoặc Actions -> Build APK -> Run workflow).
+2. APK nằm ở **Releases -> "Bản build mới nhất"** (tải thẳng về điện thoại) và ở Artifacts của lần chạy.
+3. APK debug dùng keystore cố định `ci/debug.keystore` (khóa công khai, chỉ để thử, không dùng cho Google Play),
+   nên cài đè bản mới không cần gỡ bản cũ.
+4. Workflow dừng build nếu phát hiện lỗi GDScript lúc import, để không tạo APK hỏng.
 
-## Test
-```
-godot --headless --import
-godot --headless --script res://tests/map_generation/run_tests.gd
-```
-
-## Map ID
-`FOREST-V1-100-A8F72K` = chủ đề - phiên bản thuật toán - kích thước - seed (base32).
-Sinh bản đồ chỉ dùng hash + LCG tự viết (không dùng noise/RNG của engine) để kết quả
-không đổi giữa các bản Godot. Khi đổi thuật toán: tăng `ALGO_VERSION`, giữ code cũ.
+## Chạy trên PC
+Mở `project.godot` bằng Godot 4.3, F5. Phím mũi tên hoặc click để đi.
 
 ## Cấu trúc
-- `scripts/core` cấu hình chung · `scripts/map_generation` sinh bản đồ + Map ID
-- `scripts/pathfinding` A* dùng chung · `scripts/player`, `scripts/ui`, `scripts/game`
-- `tests/` test headless · `.github/workflows/ci.yml` chạy test khi push
-
-## Build APK bằng GitHub
-1. Đẩy toàn bộ project lên repo GitHub (nhánh `main`).
-2. Tab **Actions -> Build APK -> Run workflow** (hoặc tự chạy mỗi lần push vào main).
-3. Khi xong, tải **survival-tower-defense-apk** ở mục Artifacts, giải nén, cài APK lên Android.
-- APK này là bản debug (ký bằng debug keystore), chỉ để thử, không đưa lên Google Play được.
-- `export_presets.cfg` đã viết tay, chưa kiểm chứng. Nếu lỗi, mở project trong Godot: Project -> Export, kiểm tra preset "Android" rồi lưu lại.
-- Package mặc định: `com.survivaltd.game` (đổi trong `export_presets.cfg`).
+`scripts/core` · `map_generation` · `pathfinding` (A*, FlowField) · `player` · `monsters` · `waves` · `ui` · `game`.
+`tests/` là test headless chạy tay khi cần (không chạy trên GitHub).
