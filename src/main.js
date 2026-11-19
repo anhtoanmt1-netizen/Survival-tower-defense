@@ -37,7 +37,7 @@ function start() {
   game.scene.add('UI', UIScene, false);
   game.scene.add('Game', GameScene, true, { mapId: id, name: settings.name, shirt: settings.shirt, debug });
 }
-function backToMenu() { game?.destroy(true); game = null; $('hud').hidden = true; $('menu').hidden = false; $('mapid').value = settings.lastMapId || ''; }
+function backToMenu() { game?.destroy(true); game = null; ['tpanel', 'skillmodal', 'toast'].forEach((id) => ($(id).hidden = true)); $('hud').hidden = true; $('menu').hidden = false; $('mapid').value = settings.lastMapId || ''; }
 $('start').onclick = start;
 $('random').onclick = () => { $('mapid').value = newRandomMapId(); };
 $('copy').onclick = () => copy($('hudid').textContent).then(() => { $('copy').textContent = 'Đã chép'; setTimeout(() => ($('copy').textContent = 'Chép mã'), 1200); });

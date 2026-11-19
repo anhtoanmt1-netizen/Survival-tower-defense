@@ -4,7 +4,8 @@ import { MONSTER_SETTINGS } from '../config/slimes.js';
 const REFRESH = 0.2; // giây: giới hạn tần suất tính lại flow field
 // Thế giới quái vật: pooling, flow field dùng chung, va chạm giữa quái, tấn công người chơi.
 export class MonsterWorld {
-  constructor(grid, hooks = {}) {
+  constructor(grid, hooks = {}, rng = Math.random) {
+    this.rng = rng;
     this.grid = grid; this.field = new FlowField(grid.width, grid.height); this.hooks = hooks;
     this.monsters = []; this.free = []; this.active = 0; this.kills = 0; this.refreshT = 0; this.fieldKey = null;
   }
@@ -12,10 +13,22 @@ export class MonsterWorld {
     const m = (this.free.pop() || new Monster()).init(type, x, y, hpMul, speedMul);
     this.monsters.push(m); this.active++; this.hooks.onSpawn?.(m); return m;
   }
-  damage(m, amount) {
-    const died = m.damage(amount); this.hooks.onHit?.(m);
-    if (died) { this.active--; this.kills++; this.hooks.onKill?.(m); }
+  damage(m, amount, opts) {
+    const died = m.damage(amount, opts?.silent); if (!opts?.silent) this.hooks.onHit?.(m);
+    if (died) {
+      this.active--; this.kills++; this.hooks.onKill?.(m);
+      if (m.burnT > 0 && m.spreadChance > 0 && this.rng() < m.spreadChance) { // lửa lan sang slime ở gần
+        for (const o of this.monsters) if (o !== m && !o.dying && Math.hypot(o.x - m.x, o.y - m.y) <= m.spreadRadius) this.ignite(o, m);
+      }
+    }
     return died;
+  }
+  applySlow(m, pct, dur) { if (m.dying) return; if (pct >= m.slowPct || m.slowT <= 0) m.slowPct = pct; m.slowT = Math.max(m.slowT, dur); }
+  // cfg: {burnDps, burnDur, spreadChance, spreadRadius}
+  ignite(m, cfg) {
+    if (m.dying || !cfg.burnDps) return;
+    m.burnDps = Math.max(m.burnT > 0 ? m.burnDps : 0, cfg.burnDps); m.burnT = Math.max(m.burnT, cfg.burnDur); m.burnDur = cfg.burnDur;
+    m.spreadChance = cfg.spreadChance || 0; m.spreadRadius = cfg.spreadRadius || 0;
   }
   // players: [{x,y,r,dead,takeDamage(n)->bool}]
   update(dt, players) {
@@ -24,6 +37,12 @@ export class MonsterWorld {
     this.refreshT -= dt;
     if (this.fieldKey === null || (this.refreshT <= 0 && (key !== this.fieldKey || this.field.gridVersion !== grid.version))) {
       this.field.compute(grid, alive.map((p) => ({ x: Math.floor(p.x), y: Math.floor(p.y) }))); this.fieldKey = key; this.refreshT = REFRESH;
+    }
+    for (const m of this.monsters.slice()) { // hiệu ứng trạng thái: làm chậm, cháy
+      if (m.dying) continue;
+      if (m.slowT > 0) { m.slowT -= dt; if (m.slowT <= 0) { m.slowT = 0; m.slowPct = 0; } }
+      m.slow = 1 - m.slowPct;
+      if (m.burnT > 0) { m.burnT -= dt; m.burnAcc += m.burnDps * dt; if (m.burnAcc >= 1) { const d = Math.floor(m.burnAcc); m.burnAcc -= d; this.damage(m, d, { silent: true }); } if (m.burnT <= 0) { m.burnT = 0; m.burnAcc = 0; } }
     }
     for (const m of this.monsters) {
       if (m.dying) { m.update(dt, this.field, grid); continue; }

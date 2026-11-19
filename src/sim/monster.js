@@ -5,6 +5,7 @@ export class Monster {
   init(type, x, y, hpMul = 1, speedMul = 1) {
     const c = SLIMES[type]; this.type = type; this.cfg = c; this.x = x; this.y = y; this.r = c.radius;
     this.maxHp = this.hp = c.hp * hpMul; this.speed = c.speed * speedMul; this.slow = 1;
+    this.slowT = 0; this.slowPct = 0; this.burnT = 0; this.burnDps = 0; this.burnAcc = 0; this.burnDur = 0; this.spreadChance = 0; this.spreadRadius = 0;
     this.alive = true; this.dying = false; this.dieT = 0; this.attackCd = 0; this.hitFlash = 0; this.state = 'move'; this.vx = 0; this.vy = 0; this.faceLeft = false;
     return this;
   }
@@ -40,9 +41,9 @@ export class Monster {
     if (!best) return; const dx = best[0] - this.x, dy = best[1] - this.y, dd = Math.hypot(dx, dy) || 1, s = Math.min(dd, 4 * dt);
     this.x += dx / dd * s; this.y += dy / dd * s;
   }
-  damage(amount) {
+  damage(amount, silent = false) {
     if (this.dying || !this.alive) return false;
-    this.hp -= amount; this.hitFlash = 0.12;
+    this.hp -= amount; if (!silent) this.hitFlash = 0.12;
     if (this.hp <= 0) { this.dying = true; this.dieT = MONSTER_SETTINGS.dyingTime; this.state = 'dying'; return true; }
     return false;
   }

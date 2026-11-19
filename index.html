@@ -22,12 +22,30 @@
   #err { color:#ff8a80; min-height:1.2em; font-size:13px; } small { opacity:.7; }
   #hud { position:fixed; z-index:5; left:max(8px,env(safe-area-inset-left)); top:max(8px,env(safe-area-inset-top)); display:flex; gap:6px; align-items:center; background:#0008; padding:4px 6px; border-radius:10px; font-size:12px; touch-action:auto; }
   #hud button { min-height:34px; padding:4px 10px; font-size:12px; } #hudid { font-family:monospace; }
+  #toast { position:fixed; z-index:20; left:50%; top:calc(max(8px,env(safe-area-inset-top)) + 54px); transform:translateX(-50%); max-width:min(92vw,420px); padding:10px 14px; border-radius:10px; font-weight:700; text-align:center; font-size:14px; pointer-events:none; }
+  #toast.err { background:#b3261ee6; } #toast.ok { background:#2e7d32e6; } #toast[hidden],#tpanel[hidden],#skillmodal[hidden]{display:none;}
+  #tpanel { position:fixed; z-index:6; left:50%; transform:translateX(-50%); bottom:calc(max(8px,env(safe-area-inset-bottom)) + 150px); width:min(330px,calc(100vw - 16px)); background:#14221bf2; border:1px solid #ffffff30; border-radius:12px; padding:10px; display:grid; gap:8px; font-size:13px; touch-action:manipulation; }
+  #tpanel .th { display:flex; gap:8px; align-items:center; } #tpanel .th b { flex:1; font-size:15px; } #tlv { color:var(--accent); font-weight:700; } #tclose { min-height:32px; padding:2px 10px; }
+  #tstats div { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid #ffffff12; } #tstats i { color:#7ddc7d; font-style:normal; }
+  .chip { display:inline-block; border:1px solid; border-radius:99px; padding:2px 8px; margin:0 4px 4px 0; font-size:12px; } .sk { margin-top:4px; opacity:.9; font-size:12px; }
+  #tup.poor { opacity:.6; } #tup:disabled { opacity:.5; } #tsell.warn { background:#b3261e; } #tpick { background:var(--accent); color:#2b1f06; font-weight:700; }
+  #skillmodal { position:fixed; inset:0; z-index:30; background:#000b; display:flex; align-items:center; justify-content:center; padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); overflow:auto; touch-action:pan-y; }
+  .sm { width:min(760px,100%); display:grid; gap:10px; } .sm h2 { margin:0; } #smcards { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }
+  .card { text-align:left; display:grid; gap:6px; padding:12px; border:2px solid var(--c); background:#14221b; border-radius:12px; } .card:disabled { opacity:.45; } .card .ic { font-size:34px; } .card small { opacity:.8; } .card .tier { color:var(--c); font-weight:700; font-size:13px; } .card .st { display:grid; gap:2px; font-size:12px; opacity:.9; }
 </style>
 </head>
 <body>
 <div id="safe-probe"></div>
 <div id="game"></div>
 <div id="hud" hidden><span id="hudid"></span><button id="copy" type="button">Chép mã</button><button id="back" type="button">Menu</button></div>
+<div id="toast" hidden></div>
+<div id="tpanel" hidden>
+  <div class="th"><b id="tname"></b><span id="tlv"></span><button id="tclose" type="button" aria-label="Đóng">✕</button></div>
+  <div id="tstats"></div><div id="tbranches"></div>
+  <button id="tpick" type="button" hidden></button><button id="tup" type="button"></button>
+  <div class="row"><button id="tsell" type="button"></button><button id="treset" type="button" hidden></button></div>
+</div>
+<div id="skillmodal" hidden><div class="sm"><h2>Chọn nhánh kỹ năng</h2><p id="smsub"></p><div id="smcards"></div><button id="smclose" type="button">Để sau</button></div></div>
 <div id="menu">
   <div class="card">
     <h1>Survival Tower Defense</h1>
@@ -36,7 +54,7 @@
     <label>Mã bản đồ (để trống = ngẫu nhiên)<input id="mapid" type="text" placeholder="FOREST-2026-A8F72K" autocapitalize="characters" autocomplete="off" /></label>
     <div id="err"></div>
     <div class="row"><button id="random" type="button">Tạo mã ngẫu nhiên</button><button id="start" class="primary" type="button">Bắt đầu</button></div>
-    <small>Phiên bản 0.1 – Giai đoạn 1: bản đồ, nhân vật, điều khiển. Chưa có quái vật, tháp, multiplayer.</small>
+    <small>Phiên bản 0.3 – Giai đoạn 3: tháp, xây dựng, nâng cấp, 3 nhánh kỹ năng. Chưa có kỹ năng nhân vật, âm thanh, multiplayer.</small>
   </div>
 </div>
 <script type="module" src="/src/main.js"></script>
