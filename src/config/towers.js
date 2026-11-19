@@ -2,8 +2,8 @@
 export const TOWER_TYPES = {
   archer: {
     id: 'archer', name: 'Tháp cung tên', maxLevel: 15, milestones: [3, 5, 7, 9, 12, 15], // cấp mở khóa chọn nhánh
-    base: { damage: 8, range: 3.5, fireRate: 1.0, arrows: 1, critChance: 0.05, critMult: 1.5 },
-    perLevel: { damage: 1.18, range: 0.25, fireRate: 1.07 }, // damage, fireRate: nhân; range: cộng (ô)
+    base: { damage: 14, range: 3.8, fireRate: 1.3, arrows: 1, critChance: 0.05, critMult: 1.5 },
+    perLevel: { damage: 1.2, range: 0.25, fireRate: 1.07 }, // damage, fireRate: nhân; range: cộng (ô)
     arrowSpeed: 11, fanAngle: 0.22,
   },
 };

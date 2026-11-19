@@ -12,7 +12,7 @@ const fail = (reason, message) => ({ ok: false, reason, message: message || MSG[
 export class TowerSystem {
   constructor({ grid, world, economy, gates, hooks = {}, rng = Math.random }) {
     Object.assign(this, { grid, world, economy, gates, hooks, rng }); this.towers = []; this.projectiles = []; this.pool = []; this.nextId = 1;
-    this.scratch = new FlowField(grid.width, grid.height); this.stats = { built: 0, damage: 0 };
+    this.scratch = new FlowField(grid.width, grid.height); this.stats = { built: 0, damage: 0, refunded: 0 };
   }
   buildCost() { return Math.round(ECON.buildCost * (1 + ECON.buildCostGrowth * this.towers.length)); }
   towerAt(x, y) { return this.towers.find((t) => t.x === x && t.y === y) || null; }
@@ -20,7 +20,7 @@ export class TowerSystem {
   pathsOkWith(x, y, players) {
     const g = this.grid, i = y * g.width + x, prev = g.extra[i]; g.extra[i] = 1; // tạm đặt, KHÔNG tăng version, luôn hoàn lại
     try {
-      const targets = players.filter((p) => !p.dead).map((p) => ({ x: Math.floor(p.x), y: Math.floor(p.y) }));
+      const targets = players.filter((p) => !p.dead).map((p) => g.targetTile(p)).filter(Boolean);
       if (!targets.length) return false;
       this.scratch.compute(g, targets);
       for (const gate of this.gates) {
@@ -75,7 +75,7 @@ export class TowerSystem {
   sellValue(t) { return Math.floor(t.invested * ECON.sellRefund); }
   sell(t) {
     const i = this.towers.indexOf(t); if (i < 0) return fail('gone', 'Tháp không còn.');
-    const v = this.sellValue(t); this.towers.splice(i, 1); this.grid.setBlocked(t.x, t.y, false); this.economy.add(v); this.hooks.onSold?.(t); return { ok: true, refund: v };
+    const v = this.sellValue(t); this.towers.splice(i, 1); this.grid.setBlocked(t.x, t.y, false); this.economy.add(v); this.stats.refunded += v; this.hooks.onSold?.(t); return { ok: true, refund: v };
   }
   update(dt) {
     const ms = this.world.monsters;

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { TOWER_TYPES, BRANCHES } from '../config/towers.js';
+import { SKILLS, SPEED_UPGRADE, speedUpgradeCost } from '../config/skills.js';
+import { WAVE_SETTINGS } from '../config/waves.js';
 import { generateMap } from '../map/index.js';
 import { Grid } from '../map/grid.js';
 import { findPath } from '../core/pathfinding.js';
@@ -28,9 +30,10 @@ export class GameScene extends Phaser.Scene {
     this.economy = new Economy(); this.fx = new Effects(this); this.renderer = new MonsterRenderer(this, this.fx);
     this.world = new MonsterWorld(this.grid, {
       onFree: (m) => this.renderer.release(m),
-      onKill: (m) => { this.economy.add(m.cfg.reward); this.fx.float(m.x * TS, m.y * TS - 18, '+' + m.cfg.reward); this.fx.puff(m.x * TS, m.y * TS - 8, 0xffffff, 8, 50, 0.4); },
+      onKill: (m) => { this.economy.add(m.reward); this.fx.float(m.x * TS, m.y * TS - 18, '+' + m.reward); this.fx.puff(m.x * TS, m.y * TS - 8, 0xffffff, 8, 50, 0.4); },
     }, rng);
     this.player = new Player(this, this.grid, s.x + 0.5, s.y + 0.5, { name: this.opts.name, shirt: this.opts.shirt });
+    this.player.onPhaseEnd = (pl) => { this.fx.ring(pl.x * TS, pl.y * TS - 10, 0x9ad0ff, 6, 40, 0.4); this.fx.puff(pl.x * TS, pl.y * TS - 10, 0x9ad0ff, 8, 50, 0.4); this.panels.toast('Hết xuyên vật thể: đưa về ô hợp lệ gần nhất.', 'ok'); };
     this.activeGates = selectGates(map.gates, 1, rng); // 1 người = 1 cổng (multiplayer: n người = n cổng)
     this.director = new WaveDirector({ grid: this.grid, world: this.world, gates: this.activeGates, rng });
     for (const g of this.activeGates) {
@@ -50,7 +53,7 @@ export class GameScene extends Phaser.Scene {
       },
     } });
     this.towerView = new TowerRenderer(this, this.ts, this.fx);
-    this.selected = null; this.placing = null; this.paused = false; this.refT = 0;
+    this.selected = null; this.placing = null; this.paused = false; this.refT = 0; this.state = 'playing'; this.userPaused = false; this.playTime = 0; this.peeking = false;
     this.panels = new Panels({
       ts: this.ts, economy: this.economy, close: () => this.select(null), onModal: (open) => { this.paused = open; },
       upgrade: (t) => { const r = this.ts.upgrade(t); if (!r.ok) return this.panels.toast(r.message); this.fx.ring(t.x * TS + 16, t.y * TS + 16, 0xffd24a, 6, 34, 0.4); this.fx.float(t.x * TS + 16, t.y * TS - 12, 'LV' + t.level, '#ffffff'); this.panels.refresh(); if (t.pending > 0) this.panels.showSkill(t); },
@@ -77,6 +80,35 @@ export class GameScene extends Phaser.Scene {
     this.kv = new Phaser.Math.Vector2();
   }
   fitZoom() { this.cameras.main.setZoom(Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) / (9 * TS), 0.8, 3)); }
+  // --- kỹ năng, nâng tốc độ, xem bản đồ, tạm dừng, kết thúc ---
+  useSkill(name) {
+    if (this.state !== 'playing' || this.paused || this.userPaused || this.player.dead) return;
+    const k = this.player.skills, cfg = SKILLS[name];
+    if (!this.player.useSkill(name)) { const cd = Math.ceil(k.remainingCd(name)); this.panels.toast(`${cfg.name} đang hồi chiêu: ${Math.floor(cd / 60)}:${String(cd % 60).padStart(2, '0')}`); return; }
+    const x = this.player.x * TS, y = this.player.y * TS - 16, c = name === 'invincible' ? 0xffe066 : 0x9ad0ff;
+    this.fx.ring(x, y, c, 8, 48, 0.5); this.fx.puff(x, y, c, 12, 70, 0.5); this.panels.toast(`${cfg.icon} ${cfg.name}: ${cfg.duration}s`, 'ok');
+  }
+  upgradeSpeed() {
+    if (this.state !== 'playing' || this.player.dead) return; const lv = this.player.speedLevel;
+    if (lv >= SPEED_UPGRADE.maxLevel) return this.panels.toast('Tốc độ chạy đã tối đa.');
+    const cost = speedUpgradeCost(lv); if (!this.economy.spend(cost)) return this.panels.toast(`Không đủ vàng (cần ${cost}).`);
+    this.player.speedLevel++; this.fx.float(this.player.x * TS, this.player.y * TS - 40, '⚡ LV' + this.player.speedLevel, '#8dff8d'); this.panels.toast(`Tốc độ chạy LV${this.player.speedLevel} (+${Math.round(SPEED_UPGRADE.perLevel * this.player.speedLevel * 100)}%)`, 'ok');
+  }
+  peekAt(tx, ty) { const cam = this.cameras.main; cam.stopFollow(); cam.pan(tx * TS + 16, ty * TS + 16, 350, 'Sine.easeOut'); this.peeking = true; }
+  followPlayer() { this.cameras.main.startFollow(this.player.sprite, true, 0.15, 0.15); this.peeking = false; }
+  togglePause() {
+    if (this.state !== 'playing') return; this.userPaused = !this.userPaused; const el = document.getElementById('pauseov'); if (el) el.hidden = !this.userPaused;
+  }
+  checkEnd(dt) {
+    if (this.state !== 'playing') return; this.playTime += dt; const d = this.director;
+    if (this.player.dead) this.finish(false);
+    else if (d.wave >= WAVE_SETTINGS.totalWaves && d.queue.length === 0 && this.world.active === 0) this.finish(true);
+  }
+  finish(won) {
+    this.state = won ? 'won' : 'lost';
+    const stats = { won, wave: this.director.wave, kills: this.world.kills, gold: this.economy.earned - this.ts.stats.refunded, towers: this.ts.stats.built, damage: Math.round(this.world.damageDealt), time: Math.round(this.playTime), mapId: this.opts.mapId };
+    this.time.delayedCall(won ? 600 : 1400, () => this.opts.onEnd?.(stats));
+  }
   select(t) { this.selected = t; if (t) this.panels.showTower(t); else this.panels.hide(); }
   // --- Kéo thả xây tháp: bắt đầu từ thẻ trong UIScene; ghost lệch lên trên ngón tay để không bị che ---
   beginPlacement(pointer) {
@@ -105,7 +137,8 @@ export class GameScene extends Phaser.Scene {
     const tower = this.ts.towerAt(tx, ty) || (fy < 0.5 ? this.ts.towerAt(tx, ty + 1) : null); // thân tháp cao hơn 1 ô: chạm phần trên cũng chọn
     if (tower) { this.select(tower); return; }
     if (this.selected) this.select(null);
-    const me = this.player.tile(), path = findPath(this.grid, me.x, me.y, tx, ty);
+    const me = this.player.tile(), phasing = this.player.skills.isActive('phase');
+    const path = phasing ? (this.grid.inBounds(tx, ty) ? [{ x: tx, y: ty }] : null) : findPath(this.grid, me.x, me.y, tx, ty); // đang xuyên vật thể: đi thẳng tới điểm chạm
     const m = this.add.circle(tx * TS + 16, ty * TS + 16, 11).setStrokeStyle(3, path ? 0xffffff : 0xff4444).setDepth(1e6);
     this.tweens.add({ targets: m, alpha: 0, scale: 1.7, duration: 500, onComplete: () => m.destroy() });
     if (path) this.player.setPath(path);
@@ -115,10 +148,10 @@ export class GameScene extends Phaser.Scene {
     let vec = ui?.joystick?.vec;
     const kx = (K.D.isDown || K.RIGHT.isDown ? 1 : 0) - (K.A.isDown || K.LEFT.isDown ? 1 : 0), ky = (K.S.isDown || K.DOWN.isDown ? 1 : 0) - (K.W.isDown || K.UP.isDown ? 1 : 0);
     if (kx || ky) { this.kv.set(kx, ky).normalize(); vec = this.kv; }
-    if (!this.paused) { // đang mở bảng chọn nhánh (chơi đơn) thì tạm dừng mô phỏng
+    if (!this.paused && !this.userPaused && this.state === 'playing') { // bảng chọn nhánh / tạm dừng / kết thúc: dừng mô phỏng
       this.player.update(dt, vec); this.director.update(dt);
       const events = this.world.update(dt, [this.player]); if (events.length) this.cameras.main.shake(120, 0.004);
-      this.economy.update(dt, this.ts.towers.length, this.ts.buildCost()); this.ts.update(dt);
+      this.economy.update(dt, this.ts.towers.length, this.ts.buildCost()); this.ts.update(dt); this.checkEnd(dt);
     } else this.player.update(0, null);
     this.fx.update(dt); this.renderer.sync(this.world.monsters); this.towerView.sync(dt, this.selected);
     this.refT += dt; if (this.refT > 0.4) { this.refT = 0; this.panels.refresh(); }

@@ -7,13 +7,14 @@ export class MonsterWorld {
   constructor(grid, hooks = {}, rng = Math.random) {
     this.rng = rng;
     this.grid = grid; this.field = new FlowField(grid.width, grid.height); this.hooks = hooks;
-    this.monsters = []; this.free = []; this.active = 0; this.kills = 0; this.refreshT = 0; this.fieldKey = null;
+    this.monsters = []; this.free = []; this.active = 0; this.kills = 0; this.damageDealt = 0; this.refreshT = 0; this.fieldKey = null;
   }
-  spawn(type, x, y, hpMul, speedMul) {
-    const m = (this.free.pop() || new Monster()).init(type, x, y, hpMul, speedMul);
+  spawn(type, x, y, hpMul, speedMul, rewardMul) {
+    const m = (this.free.pop() || new Monster()).init(type, x, y, hpMul, speedMul, rewardMul);
     this.monsters.push(m); this.active++; this.hooks.onSpawn?.(m); return m;
   }
   damage(m, amount, opts) {
+    if (!m.dying && m.alive) this.damageDealt += Math.max(0, Math.min(amount, m.hp));
     const died = m.damage(amount, opts?.silent); if (!opts?.silent) this.hooks.onHit?.(m);
     if (died) {
       this.active--; this.kills++; this.hooks.onKill?.(m);
@@ -33,10 +34,10 @@ export class MonsterWorld {
   // players: [{x,y,r,dead,takeDamage(n)->bool}]
   update(dt, players) {
     const events = [], alive = players.filter((p) => !p.dead), grid = this.grid;
-    const key = alive.map((p) => Math.floor(p.x) + ',' + Math.floor(p.y)).join('|');
+    const tiles = alive.map((p) => grid.targetTile(p)).filter(Boolean), key = tiles.map((t) => t.x + ',' + t.y).join('|');
     this.refreshT -= dt;
     if (this.fieldKey === null || (this.refreshT <= 0 && (key !== this.fieldKey || this.field.gridVersion !== grid.version))) {
-      this.field.compute(grid, alive.map((p) => ({ x: Math.floor(p.x), y: Math.floor(p.y) }))); this.fieldKey = key; this.refreshT = REFRESH;
+      this.field.compute(grid, tiles); this.fieldKey = key; this.refreshT = REFRESH;
     }
     for (const m of this.monsters.slice()) { // hiệu ứng trạng thái: làm chậm, cháy
       if (m.dying) continue;

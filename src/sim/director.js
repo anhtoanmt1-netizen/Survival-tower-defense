@@ -39,7 +39,7 @@ export class WaveDirector {
     this.acc += dt * this.settings.spawnPerSecond;
     while (this.acc >= 1 && this.queue.length && this.world.active < this.maxActive) {
       this.acc -= 1; const q = this.queue.shift(), g = this.gates[this.spawned++ % this.gates.length], p = randomSpawnCell(this.grid, g, this.rng);
-      this.world.spawn(q.type, p.x, p.y, q.hpMul, q.speedMul);
+      this.world.spawn(q.type, p.x, p.y, q.hpMul, q.speedMul, q.rewardMul);
     }
     if (this.acc > 1) this.acc = 1;
   }

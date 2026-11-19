@@ -3,7 +3,7 @@ export const WAVE_SETTINGS = { totalWaves: 100, firstWaveDelay: 15, interval: 30
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export function waveSpec(w) {
   const boss = w % 10 === 0;                              // mốc thử thách 10,20,...,100
-  let count = Math.round(4 + 1.2 * w + 0.012 * w * w);
+  let count = Math.round(3 + 1.0 * w + 0.012 * w * w);
   const weights = {
     green: Math.max(0.1, 1 - w / 40),
     blue: w >= 4 ? clamp(w / 20, 0, 0.5) : 0,
@@ -12,5 +12,5 @@ export function waveSpec(w) {
     gold: 0,
   };
   if (boss) { weights.gold = 0.25; count = Math.round(count * 1.25); }
-  return { wave: w, count, boss, hpMul: 1 + 0.08 * w + 0.0015 * w * w, speedMul: Math.min(1.7, 1 + 0.006 * w), weights };
+  return { wave: w, count, boss, hpMul: 1 + 0.06 * w + 0.0015 * w * w, rewardMul: 1 + 0.04 * w, speedMul: Math.min(1.7, 1 + 0.006 * w), weights };
 }

@@ -6,7 +6,7 @@ export const ECON = {
   sellRefund: 0.6,        // hoàn 60% tổng vàng đã đầu tư
   buildTime: 2,           // giây
   upgradeCosts: [45, 70], // LV1->2, LV2->3; các cấp sau theo upgradeGrowth
-  upgradeGrowth: 1.42,
+  upgradeGrowth: 1.36,
   resetBranchCost: 40,    // phí đặt lại lựa chọn nhánh của một tháp
   safetyIncome: 3,        // vàng/giây chỉ khi KHÔNG còn tháp nào và không đủ tiền xây (chống kẹt không thể chơi tiếp)
 };

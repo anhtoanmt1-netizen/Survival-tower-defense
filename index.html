@@ -32,12 +32,14 @@
   #skillmodal { position:fixed; inset:0; z-index:30; background:#000b; display:flex; align-items:center; justify-content:center; padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); overflow:auto; touch-action:pan-y; }
   .sm { width:min(760px,100%); display:grid; gap:10px; } .sm h2 { margin:0; } #smcards { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }
   .card { text-align:left; display:grid; gap:6px; padding:12px; border:2px solid var(--c); background:#14221b; border-radius:12px; } .card:disabled { opacity:.45; } .card .ic { font-size:34px; } .card small { opacity:.8; } .card .tier { color:var(--c); font-weight:700; font-size:13px; } .card .st { display:grid; gap:2px; font-size:12px; opacity:.9; }
+  #pauseov,#endmodal { position:fixed; inset:0; z-index:40; background:#000a; display:flex; align-items:center; justify-content:center; padding:16px; touch-action:auto; }
+  #pauseov[hidden],#endmodal[hidden]{display:none;} #endstats { display:grid; gap:4px; } #endstats div { display:flex; justify-content:space-between; border-bottom:1px solid #ffffff18; padding:3px 0; }
 </style>
 </head>
 <body>
 <div id="safe-probe"></div>
 <div id="game"></div>
-<div id="hud" hidden><span id="hudid"></span><button id="copy" type="button">Chép mã</button><button id="back" type="button">Menu</button></div>
+<div id="hud" hidden><button id="pausebtn" type="button" aria-label="Tạm dừng">⏸</button><span id="hudid"></span><button id="copy" type="button">Chép mã</button><button id="back" type="button">Menu</button></div>
 <div id="toast" hidden></div>
 <div id="tpanel" hidden>
   <div class="th"><b id="tname"></b><span id="tlv"></span><button id="tclose" type="button" aria-label="Đóng">✕</button></div>
@@ -46,6 +48,8 @@
   <div class="row"><button id="tsell" type="button"></button><button id="treset" type="button" hidden></button></div>
 </div>
 <div id="skillmodal" hidden><div class="sm"><h2>Chọn nhánh kỹ năng</h2><p id="smsub"></p><div id="smcards"></div><button id="smclose" type="button">Để sau</button></div></div>
+<div id="pauseov" hidden><div class="card"><h2>Tạm dừng</h2><button id="resume" class="primary" type="button">Tiếp tục</button></div></div>
+<div id="endmodal" hidden><div class="card"><h2 id="endtitle"></h2><p id="endsub"></p><div id="endstats"></div><div class="row"><button id="endmenu" type="button">Về menu</button><button id="endretry" class="primary" type="button">Chơi lại bản đồ này</button></div></div></div>
 <div id="menu">
   <div class="card">
     <h1>Survival Tower Defense</h1>
@@ -54,7 +58,7 @@
     <label>Mã bản đồ (để trống = ngẫu nhiên)<input id="mapid" type="text" placeholder="FOREST-2026-A8F72K" autocapitalize="characters" autocomplete="off" /></label>
     <div id="err"></div>
     <div class="row"><button id="random" type="button">Tạo mã ngẫu nhiên</button><button id="start" class="primary" type="button">Bắt đầu</button></div>
-    <small>Phiên bản 0.3 – Giai đoạn 3: tháp, xây dựng, nâng cấp, 3 nhánh kỹ năng. Chưa có kỹ năng nhân vật, âm thanh, multiplayer.</small>
+    <small id="best"></small><small>Phiên bản 0.4 – Giai đoạn 4: kỹ năng nhân vật, 100 đợt, minimap, thắng/thua. Chưa có âm thanh, multiplayer.</small>
   </div>
 </div>
 <script type="module" src="/src/main.js"></script>

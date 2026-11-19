@@ -2,8 +2,8 @@ import { SLIMES, MONSTER_SETTINGS } from '../config/slimes.js';
 // Logic quái vật thuần (không phụ thuộc Phaser) để kiểm thử mô phỏng. Quái KHÔNG tấn công tháp, không xuyên vật cản.
 export class Monster {
   constructor() { this.view = null; this.alive = false; }
-  init(type, x, y, hpMul = 1, speedMul = 1) {
-    const c = SLIMES[type]; this.type = type; this.cfg = c; this.x = x; this.y = y; this.r = c.radius;
+  init(type, x, y, hpMul = 1, speedMul = 1, rewardMul = 1) {
+    const c = SLIMES[type]; this.type = type; this.cfg = c; this.reward = Math.round(c.reward * rewardMul); this.x = x; this.y = y; this.r = c.radius;
     this.maxHp = this.hp = c.hp * hpMul; this.speed = c.speed * speedMul; this.slow = 1;
     this.slowT = 0; this.slowPct = 0; this.burnT = 0; this.burnDps = 0; this.burnAcc = 0; this.burnDur = 0; this.spreadChance = 0; this.spreadRadius = 0;
     this.alive = true; this.dying = false; this.dieT = 0; this.attackCd = 0; this.hitFlash = 0; this.state = 'move'; this.vx = 0; this.vy = 0; this.faceLeft = false;

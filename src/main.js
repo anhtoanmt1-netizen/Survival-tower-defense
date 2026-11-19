@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const KEY = 'std.settings.v1';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
 const save = (o) => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch { /* bỏ qua */ } };
-let game = null, settings = load();
+let game = null, settings = load(), currentMapId = '';
 settings.shirt = GAME_CONFIG.shirtColors.includes(settings.shirt) ? settings.shirt : GAME_CONFIG.shirtColors[0];
 
 const sw = $('swatches');
@@ -27,7 +27,7 @@ function start() {
   if (!raw) id = newRandomMapId(); else { const p = parseMapId(raw); if (!p.ok) { $('err').textContent = p.error; return; } id = p.id; }
   $('err').textContent = '';
   settings.name = ($('name').value.trim() || 'Nông dân').slice(0, GAME_CONFIG.player.maxNameLength); settings.lastMapId = id; save(settings);
-  $('menu').hidden = true; $('hud').hidden = false; $('hudid').textContent = id;
+  currentMapId = id; $('menu').hidden = true; $('hud').hidden = false; $('hudid').textContent = id; $('endmodal').hidden = true; $('pauseov').hidden = true;
   const debug = new URLSearchParams(location.search).get('debug') === '1';
   game = new Phaser.Game({
     type: Phaser.AUTO, parent: 'game', backgroundColor: '#1b2a1b', pixelArt: true,
@@ -35,11 +35,22 @@ function start() {
     scene: [],
   });
   // Thứ tự thêm = thứ tự vẽ: Game trước (dưới), UI sau (trên cùng). Đảo ngược sẽ làm nút bị bản đồ che mất.
-  game.scene.add('Game', GameScene, true, { mapId: id, name: settings.name, shirt: settings.shirt, debug });
+  game.scene.add('Game', GameScene, true, { mapId: id, name: settings.name, shirt: settings.shirt, debug, onEnd });
   game.scene.add('UI', UIScene, false);
 }
-function backToMenu() { game?.destroy(true); game = null; ['tpanel', 'skillmodal', 'toast'].forEach((id) => ($(id).hidden = true)); $('hud').hidden = true; $('menu').hidden = false; $('mapid').value = settings.lastMapId || ''; }
+const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+function onEnd(st) {
+  const prev = settings.bestWave || 0; settings.bestWave = Math.max(prev, st.wave); save(settings);
+  $('endtitle').textContent = st.won ? '🏆 CHIẾN THẮNG!' : '💀 THẤT BẠI'; $('endsub').textContent = (st.won ? 'Bạn đã sống sót qua 100 đợt.' : `Bạn gục ngã ở đợt ${st.wave}.`) + (st.wave > prev ? ' Kỷ lục mới!' : ` Kỷ lục: đợt ${settings.bestWave}.`);
+  $('endstats').innerHTML = [['Slime đã diệt', st.kills], ['Vàng kiếm được', st.gold + ' 🪙'], ['Số tháp đã xây', st.towers], ['Sát thương gây ra', st.damage.toLocaleString('vi-VN')], ['Thời gian sống sót', mmss(st.time)], ['Mã bản đồ', st.mapId]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  $('endmodal').hidden = false;
+}
+function backToMenu() { game?.destroy(true); game = null; ['tpanel', 'skillmodal', 'toast', 'pauseov', 'endmodal'].forEach((id) => ($(id).hidden = true)); $('hud').hidden = true; $('menu').hidden = false; $('mapid').value = settings.lastMapId || ''; $('best').textContent = settings.bestWave ? `Kỷ lục: đợt ${settings.bestWave}` : ''; }
 $('start').onclick = start;
+$('pausebtn').onclick = () => game?.scene.getScene('Game')?.togglePause(); $('resume').onclick = () => game?.scene.getScene('Game')?.togglePause();
+$('endmenu').onclick = () => backToMenu();
+$('endretry').onclick = () => { const id = currentMapId; game?.destroy(true); game = null; $('mapid').value = id; start(); };
+$('best').textContent = settings.bestWave ? `Kỷ lục: đợt ${settings.bestWave}` : '';
 $('random').onclick = () => { $('mapid').value = newRandomMapId(); };
 $('copy').onclick = () => copy($('hudid').textContent).then(() => { $('copy').textContent = 'Đã chép'; setTimeout(() => ($('copy').textContent = 'Chép mã'), 1200); });
 $('back').onclick = () => { if (confirm('Thoát về menu? Ván hiện tại sẽ mất.')) backToMenu(); };

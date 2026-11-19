@@ -2,7 +2,7 @@
 
 Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Trạng thái hiện tại: Giai đoạn 3 (v0.3.1 – sửa lỗi nút giao diện bị bản đồ che)
+## Trạng thái hiện tại: Giai đoạn 4 (v0.4)
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -26,12 +26,22 @@ Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite
 | Nâng cấp LV (45/70/… tăng theo công thức), hiển thị chỉ số trước→sau, bán hoàn 60% có xác nhận | ✅ |
 | 3 nhánh kỹ năng độc lập từng tháp (Liên hoàn / Băng / Thiêu đốt) tại LV3,5,7,9,12,15; bảng chọn có hình, mô tả, chỉ số hiện→sau; đặt lại nhánh tốn 40 vàng | ✅ có test |
 | Vàng: khởi đầu 120, xây 60 (mỗi tháp đang có làm tháp sau đắt thêm 8%), nhận vàng khi diệt slime, trợ cấp chống kẹt khi hết tháp + hết vàng | ✅ bản cơ bản; cân bằng sâu ở Giai đoạn 4 |
-| Kỹ năng nhân vật (bất tử, xuyên vật thể), nâng tốc độ chạy, minimap tương tác | ⏳ Giai đoạn 4 |
-| Màn thất bại/thắng, thống kê sau trận | ⏳ (hiện chỉ hiện chữ "BẠN ĐÃ BỊ HẠ") |
+| Kỹ năng **Bất tử** (5s, hồi 5 phút) và **Xuyên vật thể** (5s, hồi 3 phút): hiệu ứng riêng, đồng hồ hồi chiêu; xuyên vật thể không ra ngoài bản đồ, hết hạn mà đang trong vật cản thì đưa về ô đi được gần nhất | ✅ có test |
+| Nâng tốc độ chạy: 8 cấp, +7%/cấp, giá 40→860 vàng (nút ⚡) | ✅ có test |
+| Minimap: người chơi (màu áo), quái, tháp, cổng, vùng đang nhìn; chạm để phóng to, chạm điểm bất kỳ để xem khu vực đó, nút "Về nhân vật" | ✅ (chưa thử trên thiết bị thật) |
+| 100 đợt: đồng hồ đếm ngược, cảnh báo 5s trước đợt mới, số slime mỗi đợt, tổng slime tồn tại, banner đợt mới, mốc thử thách 10/20/…/100, vàng thưởng tăng theo đợt | ✅ |
+| Màn **chiến thắng** (diệt hết sau đợt 100) / **thất bại** (nhân vật chết) + thống kê: slime diệt, vàng kiếm được, số tháp, sát thương, thời gian sống sót; lưu kỷ lục đợt; chơi lại cùng Map ID | ✅ |
+| Tạm dừng (nút ⏸, chơi đơn) | ✅ |
 | Multiplayer, server, phòng, link mời | ⏳ Giai đoạn 5 |
-| Âm thanh, tạm dừng, lưu tiến trình, màn thắng/thua | ⏳ chưa làm |
+| Âm thanh/nhạc nền, cấu hình chất lượng đồ họa thấp/trung/cao | ⏳ chưa làm |
 
 Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi trái/phải, chưa có mặt sau); nước chưa có animation; đồ họa đang vẽ bằng code (có thể thay bằng sprite sheet thật, giữ nguyên key/kích thước ở `src/render`).
+
+## Cân bằng 100 đợt (đo bằng mô phỏng)
+`node tools/balance.mjs <seed> <số tháp tối đa>` chạy một bot đứng yên ở giữa bản đồ, tự xây/nâng tháp (đặt `IMMORTAL=1` để bot bất tử và chỉ đếm slime lọt qua). Kết quả với bộ thông số hiện tại (3 bản đồ, bot đơn giản, tối đa 16 tháp, người chơi bất tử):
+- Slime lọt tới người chơi bắt đầu xuất hiện quanh đợt ~20 và tăng dần về cuối; hàng chờ quái tồn đọng nhiều ở các đợt 80–100.
+- Bot thắng đợt 100 ở 2/3 bản đồ; bản đồ còn lại hết thời gian mô phỏng ở đợt 100.
+- Bot **không** chạy kéo quái và không dùng kỹ năng nên là cận dưới; bot đứng yên với 3 HP thật thì thua quanh đợt 21 vì để slime lọt. Đây là đo trên mô phỏng, chưa phải người chơi thật: cần chơi thử để chỉnh tiếp `config/waves.js`, `towers.js`, `economy.js`.
 
 ## Chạy thử
 ```bash
