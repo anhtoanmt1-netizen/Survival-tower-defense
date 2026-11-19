@@ -1,64 +1,28 @@
-name: Build APK
-
+name: Build Android APK
 on:
+  push: { branches: [main] }
+  pull_request:
   workflow_dispatch:
-  push:
-    branches: [main]
-
-permissions:
-  contents: write
-
-concurrency:
-  group: build-apk
-  cancel-in-progress: true
-
 jobs:
-  build-apk:
+  apk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
       - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Cài Godot và export templates
-        run: bash ci/setup-godot.sh templates
-
-      - name: Cấu hình Android SDK, JDK, keystore
-        run: bash ci/setup-android.sh
-
-      - name: Import project và kiểm tra lỗi GDScript
-        run: |
-          godot --headless --import 2>&1 | tee import.log || true
-          if grep -E "SCRIPT ERROR|Parse Error" import.log; then
-            echo "Có lỗi GDScript, dừng build để không tạo APK hỏng."
-            exit 1
-          fi
-
-      - name: Đặt version code theo số lần build
-        run: sed -i "s/^version\/code=.*/version\/code=${{ github.run_number }}/" export_presets.cfg
-
-      - name: Build APK
-        run: |
-          mkdir -p build
-          godot --headless --export-debug "Android" build/survival-tower-defense.apk
-          test -s build/survival-tower-defense.apk
-          ls -la build
-
+        with: { distribution: temurin, java-version: 17 }
+      - run: npm install
+      - name: Kiểm thử (bản đồ, Map ID, A*)
+        run: npm test
+      - run: npm run build
+      - name: Tạo dự án Android (nếu chưa có)
+        run: '[ -d android ] || npx cap add android'
+      - run: npx cap sync android
+      - name: Build APK debug
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: survival-tower-defense-apk
-          path: build/*.apk
-          if-no-files-found: error
-
-      - name: Đăng APK lên Releases (tải thẳng về điện thoại)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest build/survival-tower-defense.apk \
-            --title "Bản build mới nhất (#${{ github.run_number }})" \
-            --notes "APK debug, cài trực tiếp trên Android." \
-            --prerelease --target "${{ github.sha }}"
+          name: survival-tower-defense-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
