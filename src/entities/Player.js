@@ -6,7 +6,7 @@ const TS = GAME_CONFIG.tileSize;
 export class Player {
   constructor(scene, grid, x, y, { name, shirt }) {
     this.scene = scene; this.grid = grid; this.x = x; this.y = y; this.name = name; this.shirt = shirt;
-    this.r = GAME_CONFIG.player.radius; this.path = null; this.locked = false; this.dead = false; this.facingLeft = false;
+    this.r = GAME_CONFIG.player.radius; this.maxHp = GAME_CONFIG.player.hp; this.hp = this.maxHp; this.invuln = 0; this.path = null; this.locked = false; this.dead = false; this.facingLeft = false;
     this.key = ensureFarmer(scene, shirt);
     this.sprite = scene.add.sprite(x * TS, y * TS, this.key, 'idle_0').setOrigin(0.5, FARMER_ORIGIN_Y);
     this.label = scene.add.text(0, 0, name, { fontFamily: 'sans-serif', fontSize: '11px', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1).setResolution(2);
@@ -26,9 +26,17 @@ export class Player {
     if (name !== 'die') this.sprite.once('animationcomplete', () => { this.locked = false; this.anim = null; });
   }
   hurt() { if (!this.dead) this.playOnce('hurt'); }
+  // Trả về true nếu sát thương được áp dụng. Có thời gian miễn thương ngắn sau mỗi lần trúng đòn.
+  takeDamage(n) {
+    if (this.dead || this.invuln > 0) return false;
+    this.hp = Math.max(0, this.hp - n); this.invuln = GAME_CONFIG.player.invulnTime;
+    if (this.hp === 0) this.die(); else this.hurt();
+    return true;
+  }
   startBuild() { if (!this.dead) { this.locked = true; this.anim = 'build'; this.sprite.play(`${this.key}:build`, true); this.scene.time.delayedCall(900, () => { this.locked = false; this.anim = null; }); } }
   die() { if (this.dead) return; this.dead = true; this.path = null; this.playOnce('die'); }
   update(dt, joy) {
+    this.invuln = Math.max(0, this.invuln - dt);
     if (!this.dead) {
       let vx = 0, vy = 0, speed = GAME_CONFIG.player.walkSpeed, moving = false;
       const jl = joy ? Math.hypot(joy.x, joy.y) : 0;
@@ -52,6 +60,7 @@ export class Player {
       }
     }
     this.sprite.setPosition(Math.round(this.x * TS), Math.round(this.y * TS)).setDepth(this.y * TS).setFlipX(this.facingLeft);
+    this.sprite.setAlpha(this.invuln > 0 && !this.dead ? (Math.floor(this.invuln * 12) % 2 ? 0.45 : 1) : 1);
     this.label.setPosition(this.sprite.x, this.sprite.y - 44).setDepth(1e7);
   }
 }
