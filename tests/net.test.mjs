@@ -68,3 +68,11 @@ test('đường dẫn WebSocket sai bị từ chối; /health hoạt động', a
   const srv = createServer({ port: 0 }); const port = await srv.listen();
   try { const bad = mkClient(`ws://127.0.0.1:${port}/nope`); await assert.rejects(bad.connect(3000), /Không kết nối|Kết nối bị đóng/); /* đúng lý do, không phải lỗi khác */ const j = await (await fetch(`http://127.0.0.1:${port}/health`)).json(); assert.equal(j.ok, true); } finally { srv.close(); }
 });
+
+test('NetClient gọi timer/WebSocket đúng cách: không lỗi "Illegal invocation" như trong trình duyệt', async () => {
+  // Giả lập quy tắc của trình duyệt: setTimeout/clearTimeout chỉ chạy khi gọi như hàm thường (this không phải đối tượng khác)
+  const strict = (fn) => function (...a) { if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation'); return fn(...a); };
+  const fired = []; class FakeWS { constructor(url) { this.readyState = 1; this.url = url; queueMicrotask(() => this.onopen?.({})); } send(s) { fired.push(s); } close() { this.readyState = 3; this.onclose?.({}); } }
+  const c = new NetClient('ws://x/ws', { WS: FakeWS, setT: strict(setTimeout), clearT: strict(clearTimeout) });
+  await c.connect(); assert.equal(c.status, 'open'); c.send({ t: 'ping', n: 1 }); assert.equal(fired.length, 1); c.close(); assert.equal(c.status, 'closed');
+});

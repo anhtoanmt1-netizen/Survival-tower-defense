@@ -2,7 +2,7 @@
 
 Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Trạng thái hiện tại: Giai đoạn 5 (v0.5.1) – nhiều người chơi
+## Trạng thái hiện tại: Giai đoạn 5 (v0.5.2) – nhiều người chơi
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -55,6 +55,13 @@ npm run server                 # http://localhost:8080  (WebSocket: ws://localho
 - **Link mời trên Android:** workflow tự thêm intent-filter `survivaltd://join` (`tools/patch-manifest.mjs`) và dùng `@capacitor/app`. ⚠️ Chưa thử trên thiết bị; link `https` mở thẳng app (App Links) **chưa làm** vì cần xác minh tên miền.
 
 Giả định thiết kế (có thể đổi): **vàng dùng chung cả đội**; vị trí di chuyển do máy khách báo nhưng server kiểm tra tốc độ/va chạm; không vào giữa ván (chỉ vào lại bằng token); mọi máy phải cùng phiên bản game (server từ chối nếu khác giao thức/cấu hình cân bằng). Băng thông đo được: ~45 KB/s mỗi máy khi có 150 quái (≈160 MB/giờ).
+
+### Thử multiplayer bằng APK (điện thoại) – cách nhanh nhất
+APK **không có sẵn máy chủ**: nút "Tạo phòng" chỉ hoạt động khi có máy chủ đang chạy và bạn nhập đúng địa chỉ.
+1. **Thử trên Wi-Fi nhà (không cần Internet):** trên máy tính chạy `npm install && npm run build && npm run server`. Xem IP máy tính (Windows: `ipconfig`, ví dụ `192.168.1.10`), cho phép cổng 8080 qua tường lửa. Trong app: Nhiều người chơi → địa chỉ máy chủ `ws://192.168.1.10:8080/ws` → Tạo phòng. Người thứ hai có thể là trình duyệt trên máy tính (`http://192.168.1.10:8080`) hoặc điện thoại khác cùng Wi-Fi, nhập mã phòng để vào.
+2. **Chơi qua Internet:** triển khai server (Docker/`render.yaml`) rồi dùng `wss://<tên-miền>/ws`.
+
+APK debug bật `usesCleartextTraffic` và dùng `androidScheme: http` để cho phép `ws://` khi thử nội bộ (`tools/patch-manifest.mjs`, `capacitor.config.json`). Khi phát hành thật chỉ dùng `wss://` thì nên bỏ cleartext. Trong APK ô địa chỉ máy chủ **không** tự điền (vì `localhost` là chính app).
 
 ### Những gì CHƯA được kiểm chứng
 - Chưa chạy trên **hai điện thoại thật** qua Internet (yêu cầu của đặc tả). Đã kiểm thử: logic server (bộ nhớ), hai client qua WebSocket thật trên localhost (tạo/vào phòng, đồng bộ, xây tháp, mất kết nối + vào lại), và chạy thử scene nhiều người với Phaser giả lập. Chưa kiểm tra: độ trễ mạng thật, hiển thị trên thiết bị, 8 người cùng lúc, tải của server.

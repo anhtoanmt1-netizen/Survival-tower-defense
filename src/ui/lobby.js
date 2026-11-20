@@ -6,7 +6,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // Màn hình nhiều người: kết nối máy chủ, tạo/vào phòng, phòng chờ. ctx: {settings, save, copy, startNet(session), leftGame(), onEnd(stats), netStatus(status)}
 export function createLobby(ctx) {
   let client = null, session = null, inGame = false;
-  const defaultUrl = () => (location.protocol.startsWith('http') && location.host ? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws` : 'ws://localhost:8080/ws');
+  // Trong APK, location.host = "localhost" là chính ứng dụng, KHÔNG phải máy chủ => không tự điền. Trên web do server phục vụ thì tự điền theo trang.
+  const isNative = () => !!(globalThis.Capacitor?.isNativePlatform?.() || (location.hostname === 'localhost' && !location.port && !!globalThis.Capacitor));
+  const defaultUrl = () => (isNative() ? '' : location.protocol.startsWith('http') && location.host ? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws` : 'ws://localhost:8080/ws');
   const httpBase = (u) => u.replace(/^ws/, 'http').replace(/\/ws\/?$/, '');
   const err = (m) => { $('mperr').textContent = m || ''; }, lerr = (m) => { $('lerr').textContent = m || ''; };
   const show = (w) => { $('mpconnect').hidden = w !== 'connect'; $('mplobby').hidden = w !== 'lobby'; };
@@ -14,11 +16,12 @@ export function createLobby(ctx) {
   function close() { try { client?.close(); } catch { /* bỏ qua */ } client = null; session = null; inGame = false; }
   async function connect(action) {
     err(''); const url = $('srvurl').value.trim();
+    if (!url) return err('Hãy nhập địa chỉ máy chủ, ví dụ ws://192.168.1.10:8080/ws (cùng Wi-Fi) hoặc wss://ten-mien/ws (qua Internet).');
     if (!/^wss?:\/\//.test(url)) return err('Địa chỉ máy chủ phải bắt đầu bằng ws:// hoặc wss://');
     const code = normalizeCode($('roomcode').value); if (action === 'join' && code.length !== 6) return err('Mã phòng gồm 6 ký tự.');
     ctx.settings.serverUrl = url; ctx.save(ctx.settings); close(); client = new NetClient(url); session = new GameSession(client); wire();
     $('mpcreate').disabled = $('mpjoin').disabled = true;
-    try { await client.connect(); } catch (e) { $('mpcreate').disabled = $('mpjoin').disabled = false; close(); return err(e.message || 'Không kết nối được.'); }
+    try { await client.connect(); } catch (e) { $('mpcreate').disabled = $('mpjoin').disabled = false; close(); return err(`${e.message || 'Không kết nối được.'} (${url}). Kiểm tra: máy chủ đang chạy; cùng Wi-Fi nếu dùng địa chỉ nội bộ; dùng wss:// nếu qua Internet.`); }
     const base = { ...client.hello(), name: ctx.settings.name, color: ctx.settings.shirt };
     client.send(action === 'create' ? { t: 'create', ...base, respawn: true } : { t: 'join', ...base, code });
   }

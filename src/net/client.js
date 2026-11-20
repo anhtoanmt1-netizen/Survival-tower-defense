@@ -3,7 +3,8 @@ import { PROTOCOL_VERSION, configChecksum } from './protocol.js';
 // (server chống trùng nên không bị trừ vàng/xây hai lần).
 export class NetClient {
   constructor(url, { WS = globalThis.WebSocket, setT = setTimeout, clearT = clearTimeout } = {}) {
-    Object.assign(this, { url, WS, setT, clearT, ws: null, session: null, rtt: 0, cmdId: 0, pending: new Map(), status: 'closed', userClosed: false, tries: 0, inGame: false });
+    // Bọc timer: trình duyệt ném 'Illegal invocation' nếu setTimeout bị gọi với this = đối tượng khác
+    Object.assign(this, { url, WS, setT: (...a) => setT(...a), clearT: (...a) => clearT(...a), ws: null, session: null, rtt: 0, cmdId: 0, pending: new Map(), status: 'closed', userClosed: false, tries: 0, inGame: false });
     this.onmessage = null; this.onstatus = null; this.pingT = null; this.retryT = null; this.pn = 0; this.retrying = false;
   }
   setStatus(s) { if (this.status !== s) { this.status = s; this.onstatus?.(s); } }
