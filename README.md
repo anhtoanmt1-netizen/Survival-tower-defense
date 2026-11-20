@@ -2,7 +2,7 @@
 
 Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Trạng thái hiện tại: Giai đoạn 5 (v0.5) – nhiều người chơi
+## Trạng thái hiện tại: Giai đoạn 5 (v0.5.1) – nhiều người chơi
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -45,6 +45,7 @@ Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi t
 ## Multiplayer – cách chạy
 Máy chủ không cần cài thêm gói nào (WebSocket tự viết bằng module có sẵn của Node 20+).
 ```bash
+# Cần Node 20+ (test chạy được cả Node 20 nhờ client WebSocket dự phòng)
 npm install && npm run build   # build bản web (để máy chủ phục vụ luôn trang chơi)
 npm run server                 # http://localhost:8080  (WebSocket: ws://localhost:8080/ws, kiểm tra: /health)
 ```

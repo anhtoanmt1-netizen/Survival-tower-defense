@@ -8,6 +8,9 @@ import { GameSession } from '../src/net/gameSession.js';
 import { Mirror } from '../src/net/mirror.js';
 import { generateMap } from '../src/map/index.js';
 import { PROTOCOL_VERSION, configChecksum, PALETTE } from '../src/net/protocol.js';
+import { NodeWebSocket } from './helpers/ws-client.mjs';
+const WS = globalThis.WebSocket || NodeWebSocket; // Node 20 chưa có WebSocket toàn cục => dùng client dự phòng
+const mkClient = (url) => new NetClient(url, { WS });
 
 class Fake extends EventEmitter { constructor() { super(); this.msgs = []; } send(s) { this.msgs.push(JSON.parse(s)); return true; } close() { this.emit('close'); } }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -35,7 +38,7 @@ test('gương máy khách khớp trạng thái server: quái, tháp, vàng, đ�
 test('ĐẦU-CUỐI qua WebSocket thật (localhost): tạo/vào phòng, bắt đầu, đồng bộ 2 máy, xây tháp, mất kết nối + tự vào lại', async () => {
   const srv = createServer({ port: 0 }); const port = await srv.listen(), url = `ws://127.0.0.1:${port}/ws`;
   try {
-    const mk = (name) => { const c = new NetClient(url), g = new GameSession(c); g.name = name; g.log = []; const base = g.onMsg.bind(g); g.onMsg = (m) => { g.log.push(m.t); base(m); }; c.onmessage = (m) => g.onMsg(m); return { c, g }; };
+    const mk = (name) => { const c = mkClient(url), g = new GameSession(c); g.name = name; g.log = []; const base = g.onMsg.bind(g); g.onMsg = (m) => { g.log.push(m.t); base(m); }; c.onmessage = (m) => g.onMsg(m); return { c, g }; };
     const A = mk('A'), B = mk('B'); await A.c.connect(); await B.c.connect();
     A.c.send({ t: 'create', ...A.c.hello(), name: 'Alice', color: PALETTE[0] }); await until(() => A.g.room, 3000, 'A tạo phòng'); const code = A.g.room.code; assert.match(code, /^[A-Z2-9]{6}$/);
     B.c.send({ t: 'join', ...B.c.hello(), code, name: 'Bob', color: PALETTE[0] }); await until(() => B.g.room && A.g.room.players.length === 2, 3000, 'B vào phòng');
@@ -57,11 +60,11 @@ test('ĐẦU-CUỐI qua WebSocket thật (localhost): tạo/vào phòng, bắt �
     await until(() => bplayer.connected, 8000, 'B tự vào lại'); await until(() => B.c.status === 'open' && B.g.log.filter((t) => t === 'start').length >= 2, 4000, 'B nhận lại trạng thái');
     await until(() => Math.abs(B.g.mirror.time - A.g.mirror.time) < 1.0, 3000, 'B bắt kịp thời gian'); assert.equal(B.g.mirror.ts.towers.length, 1); assert.equal(B.g.mirror.you, bplayer.id);
     // tin nhắn quá lớn bị server đóng kết nối, không sập
-    const evil = new NetClient(url); await evil.connect(); evil.ws.send('x'.repeat(40000)); await until(() => evil.status === 'closed', 3000, 'đóng kết nối tin quá lớn'); assert.equal((await fetch(`http://127.0.0.1:${port}/health`)).status, 200);
+    const evil = mkClient(url); await evil.connect(); evil.ws.send('x'.repeat(40000)); await until(() => evil.status === 'closed', 3000, 'đóng kết nối tin quá lớn'); assert.equal((await fetch(`http://127.0.0.1:${port}/health`)).status, 200);
     A.c.close(); B.c.close();
   } finally { srv.close(); }
 });
 test('đường dẫn WebSocket sai bị từ chối; /health hoạt động', async () => {
   const srv = createServer({ port: 0 }); const port = await srv.listen();
-  try { const bad = new NetClient(`ws://127.0.0.1:${port}/nope`); await assert.rejects(bad.connect(3000)); const j = await (await fetch(`http://127.0.0.1:${port}/health`)).json(); assert.equal(j.ok, true); } finally { srv.close(); }
+  try { const bad = mkClient(`ws://127.0.0.1:${port}/nope`); await assert.rejects(bad.connect(3000), /Không kết nối|Kết nối bị đóng/); /* đúng lý do, không phải lỗi khác */ const j = await (await fetch(`http://127.0.0.1:${port}/health`)).json(); assert.equal(j.ok, true); } finally { srv.close(); }
 });
