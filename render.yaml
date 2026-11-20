@@ -1,0 +1,7 @@
+# Render.com (Blueprint): máy chủ nhiều người + bản web. Render cấp HTTPS/WSS tự động.
+services:
+  - type: web
+    name: survival-tower-defense
+    runtime: docker
+    plan: free
+    healthCheckPath: /health

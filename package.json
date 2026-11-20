@@ -1,18 +1,21 @@
 {
   "name": "survival-tower-defense",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
     "test": "node --test",
-    "cap:sync": "cap sync android"
+    "cap:sync": "cap sync android",
+    "server": "node server/index.js",
+    "start": "npm run build && node server/index.js"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
     "@capacitor/core": "^6.1.2",
-    "phaser": "^3.80.1"
+    "phaser": "^3.80.1",
+    "@capacitor/app": "^6.0.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2",

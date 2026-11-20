@@ -90,7 +90,7 @@ export class UIScene extends Phaser.Scene {
     g.fillStyle(0xff3b30, 1); for (const m of world.monsters) if (!m.dying) g.fillRect(x0 + m.x * sx - 1, y0 + m.y * sy - 1, Math.max(2, sx), Math.max(2, sy));
     const vw = cam.width / cam.zoom / ts, vh = cam.height / cam.zoom / ts;
     g.lineStyle(1, 0xffffff, 0.85).strokeRect(x0 + (cam.midPoint.x / ts - vw / 2) * sx, y0 + (cam.midPoint.y / ts - vh / 2) * sy, vw * sx, vh * sy);
-    g.fillStyle(Phaser.Display.Color.HexStringToColor(player.shirt).color, 1).fillCircle(x0 + player.x * sx, y0 + player.y * sy, this.expanded ? 4 : 3).lineStyle(1, 0xffffff, 1).strokeCircle(x0 + player.x * sx, y0 + player.y * sy, this.expanded ? 4 : 3);
+    for (const mp of game.mapPlayers()) { const r = this.expanded ? 4 : 3; g.fillStyle(Phaser.Display.Color.HexStringToColor(mp.color).color, mp.dead ? 0.4 : 1).fillCircle(x0 + mp.x * sx, y0 + mp.y * sy, r).lineStyle(1, 0xffffff, 1).strokeCircle(x0 + mp.x * sx, y0 + mp.y * sy, r); }
     this.mmBack.setVisible(this.expanded || game.peeking); this.mmShrink.setVisible(this.expanded);
     // nút kỹ năng
     const cg = this.cdG; cg.clear();
@@ -109,9 +109,9 @@ export class UIScene extends Phaser.Scene {
     this.fpsT += ms; if (this.fpsT > 500) { this.fpsT = 0; this.fpsText = Math.round(this.game.loop.actualFps) + ' FPS'; }
     const hearts = '♥'.repeat(player.hp) + '♡'.repeat(player.maxHp - player.hp), total = WAVE_SETTINGS.totalWaves, cdn = Math.ceil(Math.max(0, dir.countdown));
     const nextWave = dir.wave + 1, next = dir.wave >= total ? 'Đã xuất hiện đủ ' + total + ' đợt – diệt hết để thắng' : `${dir.wave === 0 ? 'Đợt đầu' : 'Đợt ' + nextWave} sau ${cdn}s (${waveSpec(nextWave).count} slime${waveSpec(nextWave).boss ? ', THỬ THÁCH' : ''})`;
-    this.hud.setText(`${hearts}   🪙 ${game.economy.gold}\nĐợt ${dir.wave}/${total}   Slime: ${world.active}${dir.queue.length ? ' (+' + dir.queue.length + ' chờ)' : ''}\n${next}   ${this.fpsText}`);
+    this.hud.setText(`${hearts}   🪙 ${game.economy.gold}\nĐợt ${dir.wave}/${total}   Slime: ${world.active}${dir.queue.length ? ' (+' + dir.queue.length + ' chờ)' : ''}\n${next}   ${this.fpsText}${game.netInfo ? ' · ' + game.netInfo() : ''}`);
     if (dir.wave < total && cdn <= 5 && cdn > 0) this.warn.setText(`⚠ ĐỢT ${nextWave} SẮP TỚI: ${cdn}s`).setVisible(true).setScale(1 + 0.06 * Math.sin(this.time.now / 90)); else this.warn.setVisible(false);
     if (dir.wave !== this.lastWave) { this.lastWave = dir.wave; const s = dir.currentSpec; this.banner.setText(`ĐỢT ${dir.wave}${s.boss ? ' – THỬ THÁCH' : ''}\n${s.count} slime`).setAlpha(1); this.tweens.add({ targets: this.banner, alpha: 0, delay: 1500, duration: 600 }); }
-    if (player.dead) this.banner.setText('BẠN ĐÃ BỊ HẠ').setAlpha(1);
+    if (player.dead) this.banner.setText(game.deadNote ? game.deadNote() : 'BẠN ĐÃ BỊ HẠ').setAlpha(1);
   }
 }

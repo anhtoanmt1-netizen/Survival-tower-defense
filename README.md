@@ -2,7 +2,7 @@
 
 Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Trạng thái hiện tại: Giai đoạn 4 (v0.4)
+## Trạng thái hiện tại: Giai đoạn 5 (v0.5) – nhiều người chơi
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -32,10 +32,32 @@ Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite
 | 100 đợt: đồng hồ đếm ngược, cảnh báo 5s trước đợt mới, số slime mỗi đợt, tổng slime tồn tại, banner đợt mới, mốc thử thách 10/20/…/100, vàng thưởng tăng theo đợt | ✅ |
 | Màn **chiến thắng** (diệt hết sau đợt 100) / **thất bại** (nhân vật chết) + thống kê: slime diệt, vàng kiếm được, số tháp, sát thương, thời gian sống sót; lưu kỷ lục đợt; chơi lại cùng Map ID | ✅ |
 | Tạm dừng (nút ⏸, chơi đơn) | ✅ |
-| Multiplayer, server, phòng, link mời | ⏳ Giai đoạn 5 |
+| **Multiplayer**: máy chủ Node.js server-authoritative (dùng lại đúng mã mô phỏng của chế độ đơn); server quyết định sinh quái, sát thương, vàng, xây/nâng cấp/nhánh, thời gian đợt, kết quả trận. Tối đa 8 người, n người = n cổng quái | ✅ có test (bộ nhớ + WebSocket thật trên localhost) |
+| Phòng: mã 6 ký tự, vào bằng mã, link mời (`/?room=CODE` trên web, `survivaltd://join?room=CODE` trên Android), tên + màu áo **không trùng** trong phòng (server ép), chủ phòng đổi bản đồ/bật tắt hồi sinh/bắt đầu, chuyển chủ khi chủ rời | ✅ logic có test; ⚠️ link Android chưa thử trên máy |
+| Đồng bộ: Map ID + checksum bản đồ, snapshot 20 Hz (quái 10 Hz) gồm vị trí người chơi, quái, tháp, mũi tên, HP, vàng, đợt, đồng hồ, trạng thái kỹ năng; hiệu ứng qua sự kiện | ✅ máy khách dựng lại khớp server (có test) |
+| Chống gian lận/trùng: lệnh có id (gửi lại cùng id không bị trừ vàng/xây hai lần), kiểm tra tốc độ + va chạm di chuyển (kéo về nếu sai), giới hạn tần suất + kích thước tin, kiểm tra phiên bản giao thức + cấu hình cân bằng | ✅ có test |
+| Mất kết nối: giữ chỗ 60s, nhân vật đứng yên + không bị quái nhắm tới, tự vào lại bằng token và nhận lại đúng trạng thái; quá hạn thì bị loại | ✅ có test (đầu-cuối) |
+| Hồi sinh (tùy chọn phòng, 15s) + thua chung khi cả đội cùng bị hạ; thắng khi diệt hết sau đợt 100; thống kê chung | ✅ có test |
 | Âm thanh/nhạc nền, cấu hình chất lượng đồ họa thấp/trung/cao | ⏳ chưa làm |
 
 Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi trái/phải, chưa có mặt sau); nước chưa có animation; đồ họa đang vẽ bằng code (có thể thay bằng sprite sheet thật, giữ nguyên key/kích thước ở `src/render`).
+
+## Multiplayer – cách chạy
+Máy chủ không cần cài thêm gói nào (WebSocket tự viết bằng module có sẵn của Node 20+).
+```bash
+npm install && npm run build   # build bản web (để máy chủ phục vụ luôn trang chơi)
+npm run server                 # http://localhost:8080  (WebSocket: ws://localhost:8080/ws, kiểm tra: /health)
+```
+- **Chơi thử trên máy tính:** chạy server rồi mở `http://localhost:8080` bằng 2 tab/2 máy → "Nhiều người chơi" → một bên "Tạo phòng", bên kia nhập mã → chủ phòng bấm Bắt đầu.
+- **Triển khai thật:** `docker build -t std-server . && docker run -p 8080:8080 std-server`, hoặc dùng `render.yaml` (Render cấp HTTPS/WSS). Trên VPS riêng đặt sau reverse proxy có TLS.
+- **APK cần `wss://`** (WebView dùng https nên chặn `ws://`). Nhập địa chỉ `wss://<tên-miền>/ws` ở ô "Địa chỉ máy chủ"; trang web do chính server phục vụ thì tự điền sẵn. Link mời gửi dạng `https://<tên-miền>/?room=CODE`.
+- **Link mời trên Android:** workflow tự thêm intent-filter `survivaltd://join` (`tools/patch-manifest.mjs`) và dùng `@capacitor/app`. ⚠️ Chưa thử trên thiết bị; link `https` mở thẳng app (App Links) **chưa làm** vì cần xác minh tên miền.
+
+Giả định thiết kế (có thể đổi): **vàng dùng chung cả đội**; vị trí di chuyển do máy khách báo nhưng server kiểm tra tốc độ/va chạm; không vào giữa ván (chỉ vào lại bằng token); mọi máy phải cùng phiên bản game (server từ chối nếu khác giao thức/cấu hình cân bằng). Băng thông đo được: ~45 KB/s mỗi máy khi có 150 quái (≈160 MB/giờ).
+
+### Những gì CHƯA được kiểm chứng
+- Chưa chạy trên **hai điện thoại thật** qua Internet (yêu cầu của đặc tả). Đã kiểm thử: logic server (bộ nhớ), hai client qua WebSocket thật trên localhost (tạo/vào phòng, đồng bộ, xây tháp, mất kết nối + vào lại), và chạy thử scene nhiều người với Phaser giả lập. Chưa kiểm tra: độ trễ mạng thật, hiển thị trên thiết bị, 8 người cùng lúc, tải của server.
+- Hồi sinh/độ trễ: khi ping cao, nhân vật của bạn có thể bị server kéo về nếu báo vị trí quá nhanh (kiểm tra có dung sai nhưng chưa tinh chỉnh trên mạng thật).
 
 ## Cân bằng 100 đợt (đo bằng mô phỏng)
 `node tools/balance.mjs <seed> <số tháp tối đa>` chạy một bot đứng yên ở giữa bản đồ, tự xây/nâng tháp (đặt `IMMORTAL=1` để bot bất tử và chỉ đếm slime lọt qua). Kết quả với bộ thông số hiện tại (3 bản đồ, bot đơn giản, tối đa 16 tháp, người chơi bất tử):
@@ -71,6 +93,8 @@ Cùng ID cho đúng cùng bản đồ trên mọi thiết bị. **Không sửa**
 ## Cấu trúc
 ```
 src/core/      rng/noise tất định, heap, A*, flow field
+server/        máy chủ multiplayer (ws.js WebSocket tối giản, gameServer.js định tuyến, room.js mô phỏng + phòng, index.js HTTP + web)
+src/net/       giao thức, NetClient (tự nối lại), Mirror (gương trạng thái), GameSession
 src/sim/       logic thuần: monster, world, director, towers (xây/nâng cấp/nhánh/bắn), economy – kiểm thử được không cần Phaser
 src/systems/   cầu nối sim → Phaser (MonsterRenderer, pooling sprite)
 src/config/    cấu hình chung, chủ đề (themes/)

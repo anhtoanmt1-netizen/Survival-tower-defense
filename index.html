@@ -34,6 +34,11 @@
   .card { text-align:left; display:grid; gap:6px; padding:12px; border:2px solid var(--c); background:#14221b; border-radius:12px; } .card:disabled { opacity:.45; } .card .ic { font-size:34px; } .card small { opacity:.8; } .card .tier { color:var(--c); font-weight:700; font-size:13px; } .card .st { display:grid; gap:2px; font-size:12px; opacity:.9; }
   #pauseov,#endmodal { position:fixed; inset:0; z-index:40; background:#000a; display:flex; align-items:center; justify-content:center; padding:16px; touch-action:auto; }
   #pauseov[hidden],#endmodal[hidden]{display:none;} #endstats { display:grid; gap:4px; } #endstats div { display:flex; justify-content:space-between; border-bottom:1px solid #ffffff18; padding:3px 0; }
+  #mp { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom)); overflow:auto; touch-action:auto; z-index:11; } #mp[hidden]{display:none;}
+  #mplobby[hidden],#mpconnect[hidden]{display:none;} #mpconnect,#mplobby { display:grid; gap:10px; } .errline { color:#ff8a80; min-height:1.2em; font-size:13px; } .big { font-family:monospace; font-size:22px; letter-spacing:2px; color:var(--accent); }
+  .pl { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #ffffff14; } .pl i { width:16px; height:16px; border-radius:50%; border:2px solid #fff8; } .pl span { margin-left:auto; color:#ff8a80; font-size:12px; }
+  .swatches { display:flex; gap:8px; flex-wrap:wrap; } .swatches button { width:40px; height:40px; min-height:0; padding:0; border-radius:50%; border:3px solid transparent; } .swatches button.sel { border-color:#fff; } .swatches button:disabled { opacity:.25; }
+  .chk { display:flex; align-items:center; gap:8px; } #netstat { position:fixed; z-index:25; left:50%; top:calc(max(8px,env(safe-area-inset-top)) + 54px); transform:translateX(-50%); background:#b3261ee6; padding:8px 14px; border-radius:10px; font-weight:700; } #netstat[hidden]{display:none;}
 </style>
 </head>
 <body>
@@ -50,6 +55,27 @@
 <div id="skillmodal" hidden><div class="sm"><h2>Chọn nhánh kỹ năng</h2><p id="smsub"></p><div id="smcards"></div><button id="smclose" type="button">Để sau</button></div></div>
 <div id="pauseov" hidden><div class="card"><h2>Tạm dừng</h2><button id="resume" class="primary" type="button">Tiếp tục</button></div></div>
 <div id="endmodal" hidden><div class="card"><h2 id="endtitle"></h2><p id="endsub"></p><div id="endstats"></div><div class="row"><button id="endmenu" type="button">Về menu</button><button id="endretry" class="primary" type="button">Chơi lại bản đồ này</button></div></div></div>
+<div id="netstat" hidden></div>
+<div id="mp" hidden><div class="card">
+  <h1>Nhiều người chơi</h1>
+  <div id="mpconnect">
+    <label>Địa chỉ máy chủ<input id="srvurl" type="text" placeholder="wss://ten-may-chu.example/ws" autocomplete="off" autocapitalize="off" /></label>
+    <label>Mã phòng (để vào phòng của bạn bè)<input id="roomcode" type="text" placeholder="K7QM2X" maxlength="6" autocapitalize="characters" autocomplete="off" /></label>
+    <div id="mperr" class="errline"></div>
+    <div class="row"><button id="mpcreate" type="button">Tạo phòng</button><button id="mpjoin" class="primary" type="button">Vào phòng</button></div>
+    <button id="mpback" type="button">Quay lại</button>
+  </div>
+  <div id="mplobby" hidden>
+    <div class="row"><div>Mã phòng: <b id="lcode" class="big"></b></div><button id="lcopy" type="button">Chép mã</button><button id="lshare" type="button">Mời bạn</button></div>
+    <div id="lplayers"></div>
+    <label>Màu áo (không trùng với người khác)<div id="lswatches" class="swatches"></div></label>
+    <label>Mã bản đồ<input id="lmapid" type="text" autocomplete="off" /></label>
+    <div class="row"><button id="lmapset" type="button">Đặt bản đồ</button><button id="lmaprand" type="button">Ngẫu nhiên</button></div>
+    <label class="chk"><input id="lrespawn" type="checkbox" /> Cho phép hồi sinh (thua khi cả đội cùng bị hạ)</label>
+    <div id="lerr" class="errline"></div><small id="lhint"></small>
+    <div class="row"><button id="lleave" type="button">Rời phòng</button><button id="lstart" class="primary" type="button">Bắt đầu</button></div>
+  </div>
+</div></div>
 <div id="menu">
   <div class="card">
     <h1>Survival Tower Defense</h1>
@@ -57,8 +83,9 @@
     <label>Màu áo (cũng là màu của bạn trên minimap)<div id="swatches"></div></label>
     <label>Mã bản đồ (để trống = ngẫu nhiên)<input id="mapid" type="text" placeholder="FOREST-2026-A8F72K" autocapitalize="characters" autocomplete="off" /></label>
     <div id="err"></div>
-    <div class="row"><button id="random" type="button">Tạo mã ngẫu nhiên</button><button id="start" class="primary" type="button">Bắt đầu</button></div>
-    <small id="best"></small><small>Phiên bản 0.4 – Giai đoạn 4: kỹ năng nhân vật, 100 đợt, minimap, thắng/thua. Chưa có âm thanh, multiplayer.</small>
+    <div class="row"><button id="random" type="button">Tạo mã ngẫu nhiên</button><button id="start" class="primary" type="button">Chơi đơn</button></div>
+    <button id="mpbtn" type="button">👥 Nhiều người chơi</button>
+    <small id="best"></small><small>Phiên bản 0.5 – Giai đoạn 5: nhiều người chơi (cần máy chủ, xem README). Chưa có âm thanh.</small>
   </div>
 </div>
 <script type="module" src="/src/main.js"></script>

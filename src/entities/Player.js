@@ -1,6 +1,7 @@
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { ensureFarmer, FARMER_ORIGIN_Y } from '../render/farmer.js';
 import { SkillSet } from '../sim/skills.js';
+import { boxCollides } from '../sim/movement.js';
 import { SPEED_UPGRADE } from '../config/skills.js';
 const TS = GAME_CONFIG.tileSize;
 // Vị trí (x,y) tính bằng ĐƠN VỊ Ô, là vị trí chân. Va chạm: hộp vuông bán kính `radius` so với Grid.isWalkable
@@ -20,12 +21,7 @@ export class Player {
   setPath(p) { this.path = p && p.length ? p : null; this.stuckT = 0; }
   moveSpeed() { return GAME_CONFIG.player.runSpeed * (1 + SPEED_UPGRADE.perLevel * this.speedLevel); }
   useSkill(k) { return !this.dead && this.skills.use(k); }
-  collides(x, y) {
-    const r = this.r;
-    if (this.skills.isActive('phase')) return x - r < 0 || y - r < 0 || x + r > this.grid.width || y + r > this.grid.height; // xuyên vật thể nhưng không ra ngoài bản đồ
-    for (let ty = Math.floor(y - r); ty <= Math.floor(y + r); ty++) for (let tx = Math.floor(x - r); tx <= Math.floor(x + r); tx++) if (!this.grid.isWalkable(tx, ty)) return true;
-    return false;
-  }
+  collides(x, y) { return boxCollides(this.grid, x, y, this.r, this.skills.isActive('phase')); }
   play(name) { if (this.anim === name) return; this.anim = name; this.sprite.play(`${this.key}:${name}`, true); }
   playOnce(name) { // build / hurt / die: khóa animation tới khi xong (die giữ nguyên khung cuối)
     this.locked = true; this.anim = name; this.sprite.play(`${this.key}:${name}`, true);
@@ -40,6 +36,7 @@ export class Player {
     return true;
   }
   startBuild() { if (!this.dead) { this.locked = true; this.anim = 'build'; this.sprite.play(`${this.key}:build`, true); this.scene.time.delayedCall(900, () => { this.locked = false; this.anim = null; }); } }
+  revive(x, y) { this.dead = false; this.hp = this.maxHp; this.x = x; this.y = y; this.path = null; this.locked = false; this.anim = null; this.invuln = 1.5; this.play('idle'); }
   die() { if (this.dead) return; this.dead = true; this.path = null; this.playOnce('die'); }
   // Hết xuyên vật thể: nếu đang nằm trong vật cản thì đưa về ô đi được gần nhất (không bao giờ kẹt trong vật cản)
   settleAfterPhase() {

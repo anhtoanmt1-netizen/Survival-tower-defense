@@ -120,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main, w = p.positionToCamera(cam), tx = Math.floor(w.x / TS), ty = Math.floor((w.y - 56 / cam.zoom) / TS);
     const key = [tx, ty, this.grid.version, Math.floor(this.player.x), Math.floor(this.player.y)].join(',');
     if (key === this.placing.key) return; this.placing.key = key; this.placing.tile = { x: tx, y: ty };
-    const r = this.ts.checkPlacement(tx, ty, [this.player], { ignoreGold: true }); this.placing.res = r;
+    const r = this.ts.checkPlacement(tx, ty, this.placementPlayers(), { ignoreGold: true }); this.placing.res = r;
     this.ghost.setPosition(tx * TS + 16, ty * TS + 32).setVisible(true).setTint(r.ok ? 0x7dff7d : 0xff6b6b);
     this.ghostG.clear().lineStyle(2, r.ok ? 0x7dff7d : 0xff6b6b, 0.7).strokeCircle(tx * TS + 16, ty * TS + 16, TOWER_TYPES.archer.base.range * TS).fillStyle(r.ok ? 0x7dff7d : 0xff6b6b, 0.08).fillCircle(tx * TS + 16, ty * TS + 16, TOWER_TYPES.archer.base.range * TS);
   }
@@ -128,9 +128,12 @@ export class GameScene extends Phaser.Scene {
     const pl = this.placing; if (!pl || p.id !== pl.id) return;
     this.placing = null; this.ghost.setVisible(false); this.ghostG.clear();
     if (this.scene.get('UI').isUiPointer(p) || !pl.tile) return; // thả lên vùng giao diện = hủy
-    const r = this.ts.build(pl.tile.x, pl.tile.y, [this.player]);
-    if (!r.ok) this.panels.toast(r.message);
+    this.requestBuild(pl.tile.x, pl.tile.y);
   }
+  // Điểm mở rộng cho chế độ nhiều người (NetGameScene ghi đè)
+  requestBuild(x, y) { const r = this.ts.build(x, y, [this.player]); if (!r.ok) this.panels.toast(r.message); }
+  placementPlayers() { return [this.player]; }
+  mapPlayers() { return [{ x: this.player.x, y: this.player.y, color: this.player.shirt }]; }
   onTap(p) {
     const ui = this.scene.get('UI'); if (ui?.isUiPointer?.(p) || this.player.dead || this.placing || this.paused) return;
     const w = p.positionToCamera(this.cameras.main), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS), fy = w.y / TS - ty;
