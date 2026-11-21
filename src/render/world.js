@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { T } from '../map/tiles.js';
 import { makeNoise } from '../core/rng.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
-import { GROUND_RES, TILE_SRC, TILES, ROCKS, BUSH, TREE_ZONES, TREE_DISPLAY, ROCK_DISPLAY, BUSH_DISPLAY, assetManifest } from '../config/art.js';
+import { GROUND_RES, TILE_FEATHER, BASE_GRASS, TILES, ROCKS, BUSH, TREE_ZONES, TREE_DISPLAY, ROCK_DISPLAY, BUSH_DISPLAY, assetManifest } from '../config/art.js';
 import { FX } from '../config/fx.js';
-const TS = GAME_CONFIG.tileSize, CH = 16, PAD = 4, vh = (x, y) => (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+const TS = GAME_CONFIG.tileSize, CH = 16, PAD = 10, vh = (x, y) => (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
 
 export function preloadWorldAssets(scene) { scene.load.setPath('assets/'); for (const [k, f] of assetManifest()) scene.load.image(k, f); }
 // Tranh sơn dầu không phải pixel art -> lọc tuyến tính cho mượt (game vẫn pixelArt cho sprite nhân vật/slime)
@@ -32,7 +32,7 @@ export class GroundRenderer {
     rt.texture.setFilter(Phaser.Textures.FilterMode.LINEAR); rt.beginDraw();
     for (let y = cy * CH - 1; y <= cy * CH + CH; y++) for (let x = cx * CH - 1; x <= cx * CH + CH; x++) {
       if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
-      const px = (x - cx * CH) * S + PAD, py = (y - cy * CH) * S + PAD; rt.batchDraw(this.tileKey(x, y), px, py);
+      const px = (x - cx * CH) * S + PAD, py = (y - cy * CH) * S + PAD; rt.batchDraw(BASE_GRASS, px, py); rt.batchDraw(this.tileKey(x, y), px - TILE_FEATHER, py - TILE_FEATHER); // đáy cỏ + tile mép mờ chồng lên nhau
       if (this.at(x, y) === T.RIVER) {
         if (this.at(x, y - 1) !== T.RIVER) rt.batchDraw('foam_n', px, py); if (this.at(x, y + 1) !== T.RIVER) rt.batchDraw('foam_s', px, py + S - 3);
         if (this.at(x - 1, y) !== T.RIVER) rt.batchDraw('foam_w', px, py); if (this.at(x + 1, y) !== T.RIVER) rt.batchDraw('foam_e', px + S - 3, py);

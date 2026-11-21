@@ -33,8 +33,9 @@ export class UIScene extends Phaser.Scene {
     this.mmShrink = S(this.add.text(0, 0, '⤡ Thu nhỏ', btnStyle).setOrigin(1, 0).setDepth(1003).setInteractive().setVisible(false));
     this.mmBack.on('pointerdown', () => { audio.play('click'); game.followPlayer(); }); this.mmShrink.on('pointerdown', () => { audio.play('close'); this.expanded = false; this.layout(); });
     // --- HUD: khung nền bo góc + chữ + thanh đếm ngược đợt ---
-    this.hudBg = S(this.add.graphics().setDepth(999)); this.hudBar = S(this.add.graphics().setDepth(1000));
-    this.hud = S(this.add.text(0, 0, '', { ...TXT, fontStyle: '600', fontSize: '14px', lineSpacing: 4, strokeThickness: 3 }).setDepth(1000)); this.hudSize = '';
+    // HUD: chỉ chữ, nền trong suốt (viền chữ đen giữ cho dễ đọc trên mọi nền)
+    this.hud = S(this.add.text(0, 0, '', { ...TXT, fontStyle: '700', fontSize: '14px', lineSpacing: 5, strokeThickness: 4 }).setDepth(1000));
+    this.setBtn = new ActionButton(this, { color: 0x3a5a48, icon: '⚙', iconSize: 18, onTap: () => { audio.play('open'); game.opts.openSettings?.(); } });
     this.banner = S(this.add.text(0, 0, '', { ...TXT, fontSize: '26px', fontStyle: '800', strokeThickness: 6, align: 'center' }).setOrigin(0.5).setDepth(1100).setAlpha(0));
     this.warn = S(this.add.text(0, 0, '', { ...TXT, fontSize: '18px', color: '#ffd24a', align: 'center' }).setOrigin(0.5, 0).setDepth(1100).setVisible(false));
     this.lastWave = 0; this.fpsT = 0; this.fpsText = ''; this.lastWarn = -1;
@@ -67,7 +68,8 @@ export class UIScene extends Phaser.Scene {
     this.mmFrame.clear().fillStyle(0x10180f, 0.8).fillRoundedRect(this.mmX - Z - 4, this.mmY - 4, Z + 8, Z + 8, 6).lineStyle(2, 0xe0b13a, 0.95).strokeRoundedRect(this.mmX - Z - 4, this.mmY - 4, Z + 8, Z + 8, 6);
     this.mm.setPosition(this.mmX, this.mmY).setDisplaySize(Z, Z);
     this.mmBack.setPosition(this.mmX, this.mmY + Z + 8); this.mmShrink.setPosition(this.mmX - this.mmBack.width - 8, this.mmY + Z + 8);
-    this.hudX = ins.left + 10; this.hudY = ins.top + 52; this.hud.setPosition(this.hudX + 8, this.hudY + 6); this.banner.setPosition(width / 2, height * 0.3); this.warn.setPosition(width / 2, ins.top + 52); this.hudSize = '';
+    this.hud.setPosition(ins.left + 12, ins.top + 10); this.banner.setPosition(width / 2, height * 0.3); this.warn.setPosition(width / 2, ins.top + 12);
+    const rs = 17 * u; this.setBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs + 2, rs, -1, 0); // nút cài đặt nằm ngay cạnh minimap
     this.joystick.layout(u);
     const rb = 36 * u, bx = width - ins.right - 24 - rb, by = height - ins.bottom - 24 - rb;
     this.btn.layout(bx, by, rb, -5 * u, 0); this.btnT.setPosition(bx, by + 17 * u);
@@ -77,7 +79,7 @@ export class UIScene extends Phaser.Scene {
   }
   isUiPointer(p) {
     const inR = (x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h, near = (b) => Math.hypot(p.x - b.hit.x, p.y - b.hit.y) <= b.hit.r + 8, S = this.mmSize;
-    return this.joystick.ownsPointer(p) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || Object.values(this.sk).some(near)
+    return this.joystick.ownsPointer(p) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || near(this.setBtn) || Object.values(this.sk).some(near)
       || (this.buildOpen && inR(this.cardX - 98, this.cardY - 32, 196, 64)) || [this.mmBack, this.mmShrink].some((b) => b.visible && b.getBounds().contains(p.x, p.y));
   }
   update(_, ms) {
@@ -109,9 +111,8 @@ export class UIScene extends Phaser.Scene {
     const hearts = '♥'.repeat(player.hp) + '♡'.repeat(player.maxHp - player.hp), total = WAVE_SETTINGS.totalWaves, cdn = Math.ceil(Math.max(0, dir.countdown));
     const nextWave = dir.wave + 1, ns = dir.wave < total ? dir.specFor(nextWave) : null, next = ns ? `${dir.wave === 0 ? 'Đợt đầu' : 'Đợt ' + nextWave} sau ${cdn}s (${ns.count} slime${ns.boss ? ', THỬ THÁCH' : ''})` : 'Đã xuất hiện đủ ' + total + ' đợt – diệt hết để thắng';
     const text = `${hearts}   🪙 ${game.economy.gold}   ${diff.icon} ${diff.name}\nĐợt ${dir.wave}/${total}   Slime: ${world.active}${dir.queue.length ? ' (+' + dir.queue.length + ' chờ)' : ''}\n${next}\n${this.fpsText}`;
-    if (text !== this.hud.text) { this.hud.setText(text); const w = Math.max(this.hud.width, 200) + 16, h = this.hud.height + 22; if (w + 'x' + h !== this.hudSize) { this.hudSize = w + 'x' + h; this.hudBg.clear().fillStyle(0x10180f, 0.7).fillRoundedRect(this.hudX, this.hudY, w, h, 10).lineStyle(1.5, 0xe0b13a, 0.8).strokeRoundedRect(this.hudX, this.hudY, w, h, 10); this.hudW = w; this.hudH = h; } }
-    const frac = dir.wave < total ? Phaser.Math.Clamp(dir.countdown / dir.settings.interval, 0, 1) : 0;
-    this.hudBar.clear().fillStyle(0x000000, 0.5).fillRect(this.hudX + 8, this.hudY + (this.hudH || 70) - 9, (this.hudW || 200) - 16, 4).fillStyle(cdn <= 5 ? 0xff6b4a : 0xe0b13a, 1).fillRect(this.hudX + 8, this.hudY + (this.hudH || 70) - 9, ((this.hudW || 200) - 16) * frac, 4);
+    if (text !== this.hud.text) this.hud.setText(text);
+    this.setBtn.setState({ alpha: 1 });
     if (dir.wave < total && cdn <= 5 && cdn > 0) { this.warn.setText(`⚠ ĐỢT ${nextWave} SẮP TỚI: ${cdn}s`).setVisible(true).setScale(1 + 0.06 * Math.sin(this.time.now / 90)); if (cdn !== this.lastWarn) { this.lastWarn = cdn; audio.play('warn'); } } else { this.warn.setVisible(false); this.lastWarn = -1; }
     if (dir.wave !== this.lastWave) { this.lastWave = dir.wave; const s = dir.currentSpec; this.banner.setText(`ĐỢT ${dir.wave}${s.boss ? ' – THỬ THÁCH' : ''}\n${s.count} slime`).setAlpha(1); this.tweens.add({ targets: this.banner, alpha: 0, delay: 1500, duration: 600 }); audio.play(s.boss ? 'wave_boss' : 'wave_start'); }
     if (player.dead) this.banner.setText('BẠN ĐÃ BỊ HẠ').setAlpha(1);

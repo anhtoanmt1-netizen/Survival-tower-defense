@@ -1,6 +1,8 @@
 // Danh mục tài nguyên hình ảnh (cắt từ Background.png / Tree.png / Tower.png → public/assets). Thêm hình mới: thêm vào đây.
 export const GROUND_RES = 1.5;                 // độ phân giải nướng nền: px nguồn / px thế giới (tile nguồn 48px)
-export const TILE_SRC = 48;
+export const TILE_SRC = 48;                    // tile nguồn 48px
+export const TILE_FEATHER = 8;                 // tile được nạp 64px (48 + 2×8) có mép mờ, phủ chồng lên ô lân cận để các ô hòa làm một
+export const BASE_GRASS = 'base_grass';        // lớp đáy cỏ không viền
 const N = (p, n) => Array.from({ length: n }, (_, i) => `${p}_v${i}`);
 export const TILES = {
   grass: N('grass_plain', 8), grassAccent: ['grass_1', 'grass_2', 'grass_3', 'grass_4'],
@@ -26,6 +28,7 @@ export const TOWER_STAGE_LEVELS = [5, 7, 9, 12, 15];
 export const towerStage = (level) => TOWER_STAGE_LEVELS.filter((l) => level >= l).length;
 export function assetManifest() {
   const img = [];
+  img.push([BASE_GRASS, `tiles/${BASE_GRASS}.png`]);
   for (const k of [...TILES.grass, ...TILES.grassAccent, ...TILES.sand, ...TILES.water, ...TILES.waterShallow, ...TILES.pave]) img.push([k, `tiles/${k}.png`]);
   for (const k of [...ROCKS, BUSH]) img.push([k, `objects/${k}.png`]);
   for (let i = 0; i < 9; i++) img.push([`tree_${i}`, `trees/tree_${i}.png`]);

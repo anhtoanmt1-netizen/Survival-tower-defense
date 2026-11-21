@@ -18,23 +18,25 @@ export class Panels {
   hide() { this.t = null; $('tpanel').hidden = true; this.hideSkill(); }
   destroy() { this.hide(); $('toast').hidden = true; }
   refresh() { if (this.t) this.render(); }
+  // Chỉ ghi DOM khi giá trị thật sự đổi -> bảng không nhấp nháy/giật khi làm mới mỗi 0,4s
+  put(id, k, v) { const e = $(id); if (e[k] !== v) e[k] = v; }
   render() {
-    const t = this.t, ts = this.ctl.ts, eco = this.ctl.economy, T = TOWER_TYPES[t.type], up = ts.upgradeInfo(t), s = t.stats;
-    $('tname').textContent = T.name; $('tlv').textContent = 'LV ' + t.level + (t.level >= T.maxLevel ? ' (tối đa)' : '');
-    $('tstats').innerHTML = ROWS.map(([name, fn]) => {
+    const put = (id, k, v) => this.put(id, k, v), t = this.t, ts = this.ctl.ts, eco = this.ctl.economy, T = TOWER_TYPES[t.type], up = ts.upgradeInfo(t), s = t.stats;
+    put('tname', 'textContent', T.name); put('tlv', 'textContent', 'LV ' + t.level + (t.level >= T.maxLevel ? ' (tối đa)' : ''));
+    put('tstats', 'innerHTML', ROWS.map(([name, fn]) => {
       const a = fn(s), b = up.ok ? fn(up.after) : a; return `<div><span>${name}</span><b>${a}${b !== a ? ` <i>→ ${b}</i>` : ''}</b></div>`;
-    }).join('') + `<div><span>Tổng đầu tư</span><b>${t.invested} 🪙</b></div>`;
+    }).join('') + `<div><span>Tổng đầu tư</span><b>${t.invested} 🪙</b></div>`);
     const sk = []; if (s.slowPct) sk.push(`❄️ Làm chậm ${Math.round(s.slowPct * 100)}% / ${f(s.slowDur)}s${s.slowRadius ? ', lan ' + f(s.slowRadius) + ' ô' : ''}`);
     if (s.burnDps) sk.push(`🔥 Cháy ${f(s.burnDps, 0)}/s trong ${f(s.burnDur)}s${s.spreadChance ? `, lan lửa ${Math.round(s.spreadChance * 100)}%` : ''}`);
     if (s.arrows > 1) sk.push(`🏹 ${s.arrows} mũi tên/loạt`);
-    $('tbranches').innerHTML = (t.picks.length ? t.picks.map((id, i) => `<span class="chip" style="border-color:${BRANCHES[id].color}">${BRANCHES[id].icon} ${BRANCHES[id].name}</span>`).join('') : '<small>Chưa chọn nhánh kỹ năng (mở khóa ở LV' + T.milestones.join(', ') + ')</small>') + (sk.length ? `<div class="sk">${sk.join('<br>')}</div>` : '');
+    put('tbranches', 'innerHTML', (t.picks.length ? t.picks.map((id, i) => `<span class="chip" style="border-color:${BRANCHES[id].color}">${BRANCHES[id].icon} ${BRANCHES[id].name}</span>`).join('') : '<small>Chưa chọn nhánh kỹ năng (mở khóa ở LV' + T.milestones.join(', ') + ')</small>') + (sk.length ? `<div class="sk">${sk.join('<br>')}</div>` : ''));
     const needPick = t.pending > 0, building = t.state === 'building';
-    $('tpick').hidden = !needPick || building; $('treset').hidden = !t.picks.length || building; $('treset').textContent = `Đặt lại nhánh (${ts.diff.resetCost} 🪙)`;
-    const upBtn = $('tup'); upBtn.hidden = needPick;
-    if (building) { upBtn.textContent = 'Đang xây…'; upBtn.disabled = true; } else if (!up.ok) { upBtn.textContent = up.message; upBtn.disabled = true; }
-    else { upBtn.disabled = false; upBtn.textContent = `Nâng cấp LV${t.level + 1} · ${up.cost} 🪙${up.nextIsMilestone ? ' ★' : ''}`; upBtn.classList.toggle('poor', eco.gold < up.cost); }
-    $('tpick').textContent = '★ Chọn nhánh kỹ năng'; const v = ts.sellValue(t);
-    $('tsell').textContent = this.sellArmed ? `Xác nhận bán: +${v} 🪙` : `Bán tháp (+${v} 🪙)`; $('tsell').classList.toggle('warn', this.sellArmed);
+    put('tpick', 'hidden', !needPick || building); put('treset', 'hidden', !t.picks.length || building); put('treset', 'textContent', `Đặt lại nhánh (${ts.diff.resetCost} 🪙)`);
+    const upBtn = $('tup'); put('tup', 'hidden', needPick);
+    if (building) { put('tup', 'textContent', 'Đang xây…'); put('tup', 'disabled', true); } else if (!up.ok) { put('tup', 'textContent', up.message); put('tup', 'disabled', true); }
+    else { put('tup', 'disabled', false); put('tup', 'textContent', `Nâng cấp LV${t.level + 1} · ${up.cost} 🪙${up.nextIsMilestone ? ' ★' : ''}`); upBtn.classList.toggle('poor', eco.gold < up.cost); }
+    put('tpick', 'textContent', '★ Chọn nhánh kỹ năng'); const v = ts.sellValue(t);
+    put('tsell', 'textContent', this.sellArmed ? `Xác nhận bán: +${v} 🪙` : `Bán tháp (+${v} 🪙)`); $('tsell').classList.toggle('warn', this.sellArmed);
   }
   onUp() { this.ctl.upgrade(this.t); }
   onSell() {

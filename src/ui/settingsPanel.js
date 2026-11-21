@@ -4,7 +4,7 @@ import { audio } from '../systems/Audio.js';
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 // Menu Cài đặt thống nhất: Âm thanh · Màn hình (hướng, tỷ lệ) · Tầm nhìn camera · Font. Thay đổi áp dụng ngay và được lưu.
-export function initSettingsPanel({ onToggle }) {
+export function initSettingsPanel({ onToggle, onCopy, onPause, onMenu }) {
   const body = $('setbody'); let open = false;
   const seg = (items, get, set) => { const w = el('div', 'seg'); const draw = () => [...w.children].forEach((b) => b.classList.toggle('sel', b.dataset.v === get())); for (const [v, label] of items) { const b = el('button', '', label); b.type = 'button'; b.dataset.v = v; b.onclick = () => { set(v); draw(); }; w.appendChild(b); } w.redraw = draw; draw(); return w; };
   const slider = (min, max, step, get, set, fmt) => {
@@ -31,7 +31,13 @@ export function initSettingsPanel({ onToggle }) {
   const view = slider(VIEW_RANGE.min, VIEW_RANGE.max, VIEW_RANGE.step, () => settings.data.display.view, (v) => { settings.set({ display: { view: v } }); presets.redraw(); }, (v) => v.toFixed(1) + ' ô');
   const vl = el('div', 'line'); vl.style.gridTemplateColumns = '1fr auto'; vl.append(view.r, view.out); s3.append(presets, vl, el('div', 'hint', 'Số ô nhìn thấy theo cạnh ngắn màn hình. Gần = mặc định; Rộng = bao quát bản đồ.'));
   const s4 = el('section'); s4.append(el('h3', '', '🔤 Phông chữ'), el('div', 'hint', 'Montserrat – đồng bộ cho toàn bộ giao diện, thông báo, chỉ số và nút.'));
-  body.append(s1, s2, s3, s4);
+  // Ván đang chơi: mã bản đồ, tạm dừng, về menu (chỉ hiện khi đang trong ván)
+  const s0 = el('section'); s0.hidden = true; const run = el('div', 'run'), idEl = el('span'); idEl.id = 'runid'; const cp = el('button', '', 'Chép mã'); cp.type = 'button';
+  cp.onclick = () => Promise.resolve(onCopy?.()).then(() => { cp.textContent = 'Đã chép'; setTimeout(() => (cp.textContent = 'Chép mã'), 1200); }); run.append(idEl, cp);
+  const bar = el('div', 'seg'), bp = el('button', '', '⏸ Tạm dừng'), bm = el('button', '', '⌂ Về menu'); bp.type = bm.type = 'button';
+  bp.onclick = () => { setOpen(false); onPause?.(); }; bm.onclick = () => { if (confirm('Thoát về menu? Ván hiện tại sẽ mất.')) { setOpen(false); onMenu?.(); } }; bar.append(bp, bm);
+  s0.append(el('h3', '', '🎮 Ván đang chơi'), el('div', 'hint', 'Mã bản đồ'), run, bar);
+  body.append(s0, s1, s2, s3, s4);
   function refresh() {
     rows.forEach((f) => f()); orient.redraw(); ratio.redraw(); presets.redraw(); view.r.redraw();
     const land = settings.data.display.orientation !== 'portrait'; ratioLabel.hidden = ratio.hidden = !land; note.textContent = orientationNote(); note.hidden = !note.textContent;
@@ -39,5 +45,6 @@ export function initSettingsPanel({ onToggle }) {
   settings.on(refresh); refresh();
   const setOpen = (v) => { open = v; $('settings').hidden = !v; if (v) { refresh(); audio.play('open'); } else audio.play('close'); onToggle?.(v); };
   $('setclose').onclick = () => setOpen(false); $('settings').addEventListener('pointerdown', (e) => { if (e.target === $('settings')) setOpen(false); });
-  return { open: () => setOpen(true), close: () => setOpen(false), isOpen: () => open };
+  const setRun = (id) => { s0.hidden = !id; idEl.textContent = id || ''; };
+  return { setRun, open: () => setOpen(true), close: () => setOpen(false), isOpen: () => open };
 }

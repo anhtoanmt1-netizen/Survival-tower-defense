@@ -14,7 +14,10 @@ const $ = (id) => document.getElementById(id);
 let game = null, currentMapId = '';
 if (!GAME_CONFIG.shirtColors.includes(settings.data.shirt)) settings.set({ shirt: GAME_CONFIG.shirtColors[0] });
 initScreen();
-const panel = initSettingsPanel({ onToggle: (open) => game?.scene.getScene('Game')?.setSettingsOpen?.(open) });
+const panel = initSettingsPanel({
+  onToggle: (open) => game?.scene.getScene('Game')?.setSettingsOpen?.(open),
+  onCopy: () => copy(currentMapId), onPause: () => game?.scene.getScene('Game')?.togglePause(), onMenu: () => backToMenu(),
+});
 // Âm thanh trình duyệt chỉ mở sau thao tác chạm đầu tiên; mọi nút DOM đều có tiếng bấm.
 const unlock = () => { audio.unlock(); if (!game) audio.setMusic('menu'); };
 document.addEventListener('pointerdown', unlock, { capture: true });
@@ -46,7 +49,7 @@ async function start() {
   if (!raw) id = newRandomMapId(); else { const p = parseMapId(raw); if (!p.ok) { $('err').textContent = p.error; return; } id = p.id; }
   $('err').textContent = '';
   const name = ($('name').value.trim() || 'Nông dân').slice(0, GAME_CONFIG.player.maxNameLength); settings.set({ name, lastMapId: id });
-  currentMapId = id; $('menu').hidden = true; $('hud').hidden = false; $('hudid').textContent = id; $('endmodal').hidden = true; $('pauseov').hidden = true;
+  currentMapId = id; $('menu').hidden = true; panel.setRun(id); $('endmodal').hidden = true; $('pauseov').hidden = true;
   const debug = new URLSearchParams(location.search).get('debug') === '1'; await loadFonts(); audio.unlock();
   game = new Phaser.Game({
     type: Phaser.AUTO, parent: 'game', backgroundColor: '#1b2a1b', pixelArt: true,
@@ -55,7 +58,7 @@ async function start() {
   });
   bindScreen(game);
   // Thứ tự thêm = thứ tự vẽ: Game trước (dưới), UI sau (trên cùng). Đảo ngược sẽ làm nút bị bản đồ che mất.
-  game.scene.add('Game', GameScene, true, { mapId: id, name, shirt: settings.data.shirt, difficulty: settings.data.difficulty, debug, onEnd });
+  game.scene.add('Game', GameScene, true, { mapId: id, name, shirt: settings.data.shirt, difficulty: settings.data.difficulty, debug, onEnd, openSettings: () => panel.open() });
   game.scene.add('UI', UIScene, false);
 }
 const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
@@ -65,12 +68,10 @@ function onEnd(st) {
   $('endstats').innerHTML = [['Độ khó', `${d.icon} ${d.name}`], ['Slime đã diệt', st.kills], ['Vàng kiếm được', st.gold + ' 🪙'], ['Số tháp đã xây', st.towers], ['Sát thương gây ra', st.damage.toLocaleString('vi-VN')], ['Thời gian sống sót', mmss(st.time)], ['Mã bản đồ', st.mapId]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
   $('endmodal').hidden = false;
 }
-function backToMenu() { game?.destroy(true); game = null; bindScreen(null); ['tpanel', 'skillmodal', 'toast', 'pauseov', 'endmodal'].forEach((id) => ($(id).hidden = true)); $('hud').hidden = true; $('menu').hidden = false; $('mapid').value = settings.data.lastMapId || ''; showBest(); audio.setMusic('menu'); }
+function backToMenu() { game?.destroy(true); game = null; bindScreen(null); ['tpanel', 'skillmodal', 'toast', 'pauseov', 'endmodal'].forEach((id) => ($(id).hidden = true)); panel.setRun(null); $('menu').hidden = false; $('mapid').value = settings.data.lastMapId || ''; showBest(); audio.setMusic('menu'); }
 $('start').onclick = start;
-$('pausebtn').onclick = () => game?.scene.getScene('Game')?.togglePause(); $('resume').onclick = () => game?.scene.getScene('Game')?.togglePause();
-$('hudset').onclick = () => panel.open(); $('pauseset').onclick = () => panel.open(); $('menuset').onclick = () => panel.open();
+$('resume').onclick = () => game?.scene.getScene('Game')?.togglePause();
+$('pauseset').onclick = () => panel.open(); $('menuset').onclick = () => panel.open();
 $('endmenu').onclick = () => backToMenu();
 $('endretry').onclick = () => { const id = currentMapId; game?.destroy(true); game = null; $('mapid').value = id; start(); };
 $('random').onclick = () => { $('mapid').value = newRandomMapId(); };
-$('copy').onclick = () => copy($('hudid').textContent).then(() => { $('copy').textContent = 'Đã chép'; setTimeout(() => ($('copy').textContent = 'Chép mã'), 1200); });
-$('back').onclick = () => { if (confirm('Thoát về menu? Ván hiện tại sẽ mất.')) backToMenu(); };
