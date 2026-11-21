@@ -1,5 +1,5 @@
 import { TOWER_TYPES, BRANCHES, BRANCH_IDS, computeStats } from '../config/towers.js';
-import { ECON } from '../config/economy.js';
+import { audio } from '../systems/Audio.js';
 const $ = (id) => document.getElementById(id);
 const f = (n, d = 1) => Number(n.toFixed(d)).toString().replace('.', ',');
 const ROWS = [
@@ -13,7 +13,7 @@ export class Panels {
     $('tclose').onclick = () => ctl.close(); $('tup').onclick = () => this.onUp(); $('tsell').onclick = () => this.onSell();
     $('treset').onclick = () => ctl.reset(this.t); $('tpick').onclick = () => this.showSkill(this.t); $('smclose').onclick = () => this.hideSkill();
   }
-  toast(msg, kind = 'err') { const el = $('toast'); el.textContent = msg; el.className = kind; el.hidden = false; clearTimeout(this.toastTimer); this.toastTimer = setTimeout(() => (el.hidden = true), 2600); }
+  toast(msg, kind = 'err') { const el = $('toast'); el.textContent = msg; el.className = kind; el.hidden = false; if (kind === 'err') audio.play('error'); clearTimeout(this.toastTimer); this.toastTimer = setTimeout(() => (el.hidden = true), 2600); }
   showTower(t) { this.t = t; this.sellArmed = false; $('tpanel').hidden = false; this.render(); }
   hide() { this.t = null; $('tpanel').hidden = true; this.hideSkill(); }
   destroy() { this.hide(); $('toast').hidden = true; }
@@ -29,7 +29,7 @@ export class Panels {
     if (s.arrows > 1) sk.push(`🏹 ${s.arrows} mũi tên/loạt`);
     $('tbranches').innerHTML = (t.picks.length ? t.picks.map((id, i) => `<span class="chip" style="border-color:${BRANCHES[id].color}">${BRANCHES[id].icon} ${BRANCHES[id].name}</span>`).join('') : '<small>Chưa chọn nhánh kỹ năng (mở khóa ở LV' + T.milestones.join(', ') + ')</small>') + (sk.length ? `<div class="sk">${sk.join('<br>')}</div>` : '');
     const needPick = t.pending > 0, building = t.state === 'building';
-    $('tpick').hidden = !needPick || building; $('treset').hidden = !t.picks.length || building; $('treset').textContent = `Đặt lại nhánh (${ECON.resetBranchCost} 🪙)`;
+    $('tpick').hidden = !needPick || building; $('treset').hidden = !t.picks.length || building; $('treset').textContent = `Đặt lại nhánh (${ts.diff.resetCost} 🪙)`;
     const upBtn = $('tup'); upBtn.hidden = needPick;
     if (building) { upBtn.textContent = 'Đang xây…'; upBtn.disabled = true; } else if (!up.ok) { upBtn.textContent = up.message; upBtn.disabled = true; }
     else { upBtn.disabled = false; upBtn.textContent = `Nâng cấp LV${t.level + 1} · ${up.cost} 🪙${up.nextIsMilestone ? ' ★' : ''}`; upBtn.classList.toggle('poor', eco.gold < up.cost); }
@@ -51,8 +51,8 @@ export class Panels {
     $('smsub').textContent = `${TOWER_TYPES[t.type].name} LV${t.level}: chọn 1 nhánh (không thể đổi miễn phí).`;
     $('smcards').innerHTML = ''; const cur = t.stats;
     for (const id of BRANCH_IDS) {
-      const B = BRANCHES[id], tier = (cur.tiers[id] ?? -1) + 1, full = tier >= B.tiers.length, after = full ? cur : computeStats(t.type, t.level, [...t.picks, id]);
-      const c = document.createElement('button'); c.type = 'button'; c.className = 'card'; c.style.setProperty('--c', B.color); c.disabled = full;
+      const B = BRANCHES[id], tier = (cur.tiers[id] ?? -1) + 1, full = tier >= B.tiers.length, after = full ? cur : computeStats(t.type, t.level, [...t.picks, id], this.ctl.ts.mods);
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'card pick'; c.style.setProperty('--c', B.color); c.disabled = full;
       c.innerHTML = `<div class="ic">${B.icon}</div><b>${B.name}</b><small>${B.desc}</small><div class="tier">${full ? 'Đã tối đa' : `Bậc ${tier + 1}/${B.tiers.length}: ${B.tiers[tier].text}`}</div><div class="st"><span>Hiện: ${this.statLine(id, cur)}</span><span>Sau: ${this.statLine(id, after)}</span></div>`;
       c.onclick = () => this.ctl.pick(t, id); $('smcards').appendChild(c);
     }

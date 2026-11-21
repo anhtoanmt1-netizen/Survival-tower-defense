@@ -37,7 +37,8 @@ export const BRANCHES = {
 export const BRANCH_IDS = Object.keys(BRANCHES);
 export const pendingPicks = (type, level, picks) => TOWER_TYPES[type].milestones.filter((m) => m <= level).length - picks.length;
 // Chỉ số cuối cùng của tháp theo cấp + các nhánh đã chọn (theo thứ tự chọn)
-export function computeStats(type, level, picks) {
+// mods (tùy chọn, từ độ khó): {damage, fireRate} nhân lên sức mạnh tháp.
+export function computeStats(type, level, picks, mods) {
   const T = TOWER_TYPES[type], b = T.base, L = level - 1;
   const s = { damage: b.damage * Math.pow(T.perLevel.damage, L), range: b.range + T.perLevel.range * L, fireRate: b.fireRate * Math.pow(T.perLevel.fireRate, L),
     arrows: b.arrows, critChance: b.critChance, critMult: b.critMult, slowPct: 0, slowDur: 0, slowRadius: 0, burnDps: 0, burnDur: 0, spreadChance: 0, spreadRadius: 0, arrowSpeed: T.arrowSpeed, fanAngle: T.fanAngle };
@@ -47,6 +48,6 @@ export function computeStats(type, level, picks) {
     for (const [k, v] of Object.entries(t.add || {})) { if (k === 'fireRatePct') ratePct += v; else s[k] += v; }
     Object.assign(s, t.set || {});
   }
-  s.fireRate *= 1 + ratePct; s.critChance = Math.min(1, s.critChance); s.tiers = tier; s.kind = s.burnDps ? 'fire' : s.slowPct ? 'ice' : 'arrow';
+  s.fireRate *= 1 + ratePct; if (mods) { s.damage *= mods.damage ?? 1; s.fireRate *= mods.fireRate ?? 1; } s.critChance = Math.min(1, s.critChance); s.tiers = tier; s.kind = s.burnDps ? 'fire' : s.slowPct ? 'ice' : 'arrow';
   return s;
 }

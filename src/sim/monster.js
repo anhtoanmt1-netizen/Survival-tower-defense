@@ -6,7 +6,7 @@ export class Monster {
     const c = SLIMES[type]; this.type = type; this.cfg = c; this.reward = Math.round(c.reward * rewardMul); this.x = x; this.y = y; this.r = c.radius;
     this.maxHp = this.hp = c.hp * hpMul; this.speed = c.speed * speedMul; this.slow = 1;
     this.slowT = 0; this.slowPct = 0; this.burnT = 0; this.burnDps = 0; this.burnAcc = 0; this.burnDur = 0; this.spreadChance = 0; this.spreadRadius = 0;
-    this.alive = true; this.dying = false; this.dieT = 0; this.attackCd = 0; this.hitFlash = 0; this.state = 'move'; this.vx = 0; this.vy = 0; this.faceLeft = false;
+    this.alive = true; this.dying = false; this.dieT = 0; this.attackCd = 0; this.hitFlash = 0; this.barT = 0; this.hpShown = 1; this.burnNum = 0; this.burnNumT = 0; this.state = 'move'; this.vx = 0; this.vy = 0; this.faceLeft = false;
     return this;
   }
   collides(grid, x, y) {
@@ -21,7 +21,7 @@ export class Monster {
   update(dt, field, grid, goal) {
     if (!this.alive) return;
     if (this.dying) { this.dieT -= dt; return; }
-    this.attackCd = Math.max(0, this.attackCd - dt); this.hitFlash = Math.max(0, this.hitFlash - dt);
+    this.barT = Math.max(0, this.barT - dt); this.attackCd = Math.max(0, this.attackCd - dt); this.hitFlash = Math.max(0, this.hitFlash - dt);
     if (this.collides(grid, this.x, this.y)) this.unstick(grid, dt);
     const ix = Math.floor(this.x), iy = Math.floor(this.y), W = field.w;
     const d = grid.inBounds(ix, iy) ? field.dist[iy * W + ix] : Infinity;
@@ -43,7 +43,7 @@ export class Monster {
   }
   damage(amount, silent = false) {
     if (this.dying || !this.alive) return false;
-    this.hp -= amount; if (!silent) this.hitFlash = 0.12;
+    this.hp -= amount; this.barT = 3; if (!silent) this.hitFlash = 0.12;
     if (this.hp <= 0) { this.dying = true; this.dieT = MONSTER_SETTINGS.dyingTime; this.state = 'dying'; return true; }
     return false;
   }

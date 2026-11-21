@@ -1,8 +1,7 @@
 // Bảng kinh tế (giá trị khởi đầu để thử nghiệm – chỉnh ở đây, không cần sửa code).
 export const ECON = {
   startGold: 120,
-  buildCost: 60,          // tháp cấp 1
-  buildCostGrowth: 0.08,  // mỗi tháp đang có làm tháp kế tiếp đắt thêm 8% (tránh xây ồ ạt đầu game)
+  buildCost: 60,          // giá xây tháp CỐ ĐỊNH (không tăng theo số tháp/thời gian); độ khó cao có thể ghi đè ở config/difficulty.js
   sellRefund: 0.6,        // hoàn 60% tổng vàng đã đầu tư
   buildTime: 2,           // giây
   upgradeCosts: [45, 70], // LV1->2, LV2->3; các cấp sau theo upgradeGrowth

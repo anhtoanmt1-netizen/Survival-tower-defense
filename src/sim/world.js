@@ -4,8 +4,8 @@ import { MONSTER_SETTINGS } from '../config/slimes.js';
 const REFRESH = 0.2; // giây: giới hạn tần suất tính lại flow field
 // Thế giới quái vật: pooling, flow field dùng chung, va chạm giữa quái, tấn công người chơi.
 export class MonsterWorld {
-  constructor(grid, hooks = {}, rng = Math.random) {
-    this.rng = rng;
+  constructor(grid, hooks = {}, rng = Math.random, opts = {}) {
+    this.rng = rng; this.contactDamage = opts.contactDamage ?? MONSTER_SETTINGS.contactDamage;
     this.grid = grid; this.field = new FlowField(grid.width, grid.height); this.hooks = hooks;
     this.monsters = []; this.free = []; this.active = 0; this.kills = 0; this.damageDealt = 0; this.refreshT = 0; this.fieldKey = null;
   }
@@ -43,7 +43,7 @@ export class MonsterWorld {
       if (m.dying) continue;
       if (m.slowT > 0) { m.slowT -= dt; if (m.slowT <= 0) { m.slowT = 0; m.slowPct = 0; } }
       m.slow = 1 - m.slowPct;
-      if (m.burnT > 0) { m.burnT -= dt; m.burnAcc += m.burnDps * dt; if (m.burnAcc >= 1) { const d = Math.floor(m.burnAcc); m.burnAcc -= d; this.damage(m, d, { silent: true }); } if (m.burnT <= 0) { m.burnT = 0; m.burnAcc = 0; } }
+      if (m.burnT > 0) { m.burnT -= dt; m.burnNumT -= dt; m.burnAcc += m.burnDps * dt; if (m.burnAcc >= 1) { const d = Math.floor(m.burnAcc); m.burnAcc -= d; m.burnNum += d; const died = this.damage(m, d, { silent: true }); if (m.burnNumT <= 0 || died) { this.hooks.onBurnTick?.(m, m.burnNum); m.burnNum = 0; m.burnNumT = 0.6; } } if (m.burnT <= 0) { m.burnT = 0; m.burnAcc = 0; } }
     }
     for (const m of this.monsters) {
       if (m.dying) { m.update(dt, this.field, grid); continue; }
@@ -57,7 +57,7 @@ export class MonsterWorld {
       for (const p of alive) {
         if (Math.hypot(p.x - m.x, p.y - m.y) < m.r + (p.r ?? 0.3) + 0.12) {
           m.attackCd = m.cfg.attackCooldown;
-          if (p.takeDamage(MONSTER_SETTINGS.contactDamage)) events.push({ type: 'hit', monster: m, player: p });
+          if (p.takeDamage(this.contactDamage)) events.push({ type: 'hit', monster: m, player: p });
           break;
         }
       }

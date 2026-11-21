@@ -1,5 +1,7 @@
 import { TOWER_TYPES, BRANCHES, computeStats, pendingPicks } from '../config/towers.js';
 import { ECON, upgradeCost } from '../config/economy.js';
+import { NEUTRAL } from '../config/difficulty.js';
+import { towerStage } from '../config/art.js';
 import { FlowField } from '../core/flowfield.js';
 import { isBuildableTerrain } from '../map/tiles.js';
 export const MSG = {
@@ -10,11 +12,11 @@ export const MSG = {
 const fail = (reason, message) => ({ ok: false, reason, message: message || MSG[reason] });
 // Hệ thống tháp thuần (không phụ thuộc Phaser): xây, nâng cấp, nhánh kỹ năng, bán, nhắm bắn, mũi tên.
 export class TowerSystem {
-  constructor({ grid, world, economy, gates, hooks = {}, rng = Math.random }) {
-    Object.assign(this, { grid, world, economy, gates, hooks, rng }); this.towers = []; this.projectiles = []; this.pool = []; this.nextId = 1;
+  constructor({ grid, world, economy, gates, hooks = {}, rng = Math.random, diff = NEUTRAL }) {
+    Object.assign(this, { grid, world, economy, gates, hooks, rng, diff }); this.mods = { damage: diff.towerDamageMul, fireRate: diff.towerRateMul }; this.buildTime = ECON.buildTime; this.towers = []; this.projectiles = []; this.pool = []; this.nextId = 1;
     this.scratch = new FlowField(grid.width, grid.height); this.stats = { built: 0, damage: 0, refunded: 0 };
   }
-  buildCost() { return Math.round(ECON.buildCost * (1 + ECON.buildCostGrowth * this.towers.length)); }
+  buildCost() { return this.diff.buildCost; } // giá cố định, không đổi theo số tháp hay thời gian
   towerAt(x, y) { return this.towers.find((t) => t.x === x && t.y === y) || null; }
   // Ô x,y có chặn hết đường từ MỌI cổng đang hoạt động tới người chơi còn sống không? Cùng FlowField + isWalkable với AI quái vật.
   pathsOkWith(x, y, players) {
@@ -44,22 +46,24 @@ export class TowerSystem {
   build(x, y, players, type = 'archer') {
     const c = this.checkPlacement(x, y, players); if (!c.ok) return c;
     if (!this.economy.spend(c.cost)) return fail('gold');
-    const t = { id: this.nextId++, type, x, y, level: 1, picks: [], invested: c.cost, state: 'building', buildT: ECON.buildTime, cd: 0, angle: 0, kills: 0 };
+    const t = { id: this.nextId++, type, x, y, level: 1, stage: 0, picks: [], invested: c.cost, state: 'building', buildT: this.buildTime, cd: 0, angle: 0, kills: 0 };
     this.refresh(t); this.towers.push(t); this.grid.setBlocked(x, y, true); this.stats.built++; this.hooks.onBuildStart?.(t);
     return { ok: true, tower: t };
   }
-  refresh(t) { t.stats = computeStats(t.type, t.level, t.picks); t.pending = pendingPicks(t.type, t.level, t.picks); }
+  refresh(t) { t.stats = computeStats(t.type, t.level, t.picks, this.mods); t.pending = pendingPicks(t.type, t.level, t.picks); }
   upgradeInfo(t) {
     const max = TOWER_TYPES[t.type].maxLevel;
     if (t.level >= max) return { ok: false, reason: 'max', message: 'Đã tối đa.' };
     if (t.pending > 0) return { ok: false, reason: 'pick', message: 'Hãy chọn nhánh kỹ năng trước.' };
-    const cost = upgradeCost(t.level); return { ok: true, cost, before: t.stats, after: computeStats(t.type, t.level + 1, t.picks), nextIsMilestone: TOWER_TYPES[t.type].milestones.includes(t.level + 1) };
+    const cost = Math.round(upgradeCost(t.level) * this.diff.upgradeMul); return { ok: true, cost, before: t.stats, after: computeStats(t.type, t.level + 1, t.picks, this.mods), nextIsMilestone: TOWER_TYPES[t.type].milestones.includes(t.level + 1) };
   }
   upgrade(t) {
     if (t.state !== 'ready') return fail('building', 'Tháp đang xây.');
     const i = this.upgradeInfo(t); if (!i.ok) return i;
     if (!this.economy.spend(i.cost)) return fail('gold', `Không đủ vàng (cần ${i.cost}).`);
-    t.level++; t.invested += i.cost; this.refresh(t); this.hooks.onChanged?.(t); return { ok: true, tower: t };
+    t.level++; t.invested += i.cost; this.refresh(t); this.hooks.onChanged?.(t);
+    const st = towerStage(t.level); if (st !== t.stage) { t.stage = st; this.hooks.onEvolve?.(t); } // đổi hình tháp ở LV5/7/9/12/15
+    return { ok: true, tower: t };
   }
   pickBranch(t, branch) {
     if (!BRANCHES[branch]) return fail('branch', 'Nhánh không tồn tại.');
@@ -69,10 +73,10 @@ export class TowerSystem {
   }
   resetPicks(t) { // chọn lại nhánh phải trả phí
     if (!t.picks.length) return fail('nopicks', 'Chưa chọn nhánh nào.');
-    if (!this.economy.spend(ECON.resetBranchCost)) return fail('gold', `Không đủ vàng (cần ${ECON.resetBranchCost}).`);
+    if (!this.economy.spend(this.diff.resetCost)) return fail('gold', `Không đủ vàng (cần ${this.diff.resetCost}).`);
     t.picks = []; this.refresh(t); this.hooks.onChanged?.(t); return { ok: true };
   }
-  sellValue(t) { return Math.floor(t.invested * ECON.sellRefund); }
+  sellValue(t) { return Math.floor(t.invested * this.diff.sellRefund); }
   sell(t) {
     const i = this.towers.indexOf(t); if (i < 0) return fail('gone', 'Tháp không còn.');
     const v = this.sellValue(t); this.towers.splice(i, 1); this.grid.setBlocked(t.x, t.y, false); this.economy.add(v); this.stats.refunded += v; this.hooks.onSold?.(t); return { ok: true, refund: v };
@@ -88,7 +92,7 @@ export class TowerSystem {
       if (t.cd <= 0) {
         t.cd = 1 / s.fireRate; const n = s.arrows;
         for (let k = 0; k < n; k++) this.shoot(t, near[k % near.length][1], (k - (n - 1) / 2) * s.fanAngle);
-        this.hooks.onShoot?.(t);
+        t.flash = 1; this.hooks.onShoot?.(t);
       }
     }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -103,7 +107,7 @@ export class TowerSystem {
   }
   shoot(t, target, offset) {
     const s = t.stats, p = this.pool.pop() || {}, a = Math.atan2(target.y - (t.y + 0.5), target.x - (t.x + 0.5)) + offset, crit = this.rng() < s.critChance;
-    Object.assign(p, { x: t.x + 0.5, y: t.y + 0.3, vx: Math.cos(a) * s.arrowSpeed, vy: Math.sin(a) * s.arrowSpeed, speed: s.arrowSpeed, target, tx: target.x, ty: target.y, age: 0, crit, tower: t, view: null,
+    Object.assign(p, { x: t.x + 0.5, y: t.y - 0.1, vx: Math.cos(a) * s.arrowSpeed, vy: Math.sin(a) * s.arrowSpeed, speed: s.arrowSpeed, target, tx: target.x, ty: target.y, age: 0, crit, tower: t, view: null,
       dmg: s.damage * (crit ? s.critMult : 1), kind: s.kind,
       slow: s.slowPct ? { pct: s.slowPct, dur: s.slowDur, radius: s.slowRadius } : null,
       burn: s.burnDps ? { burnDps: s.burnDps, burnDur: s.burnDur, spreadChance: s.spreadChance, spreadRadius: s.spreadRadius } : null });
