@@ -7,15 +7,14 @@
     "dev": "vite --host",
     "build": "vite build",
     "test": "node --test",
-    "cap:sync": "cap sync android",
-    "server": "node server/index.js",
-    "start": "npm run build && node server/index.js"
+    "cap:sync": "cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",
     "@capacitor/core": "^6.1.2",
-    "phaser": "^3.80.1",
-    "@capacitor/app": "^6.0.2"
+    "@capacitor/screen-orientation": "^6.0.0",
+    "@fontsource/montserrat": "^5.1.0",
+    "phaser": "^3.80.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2",

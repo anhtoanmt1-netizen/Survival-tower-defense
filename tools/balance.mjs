@@ -1,5 +1,5 @@
 // Bot cân bằng: người chơi giả ĐỨNG YÊN ở giữa, tự xây/nâng tháp. Là cận dưới (người thật còn chạy, dùng kỹ năng).
-// Chạy: node tools/balance.mjs [seed] [maxTowers] [strategy]
+// Chạy: node tools/balance.mjs [seed] [maxTowers] [strategy] [gate]   (chọn độ khó: DIFF=easy|normal|hard|veryHard|nightmare, thêm IMMORTAL=1 để bot bất tử)
 import { generateMap } from '../src/map/index.js';
 import { formatMapId } from '../src/map/mapId.js';
 import { Grid } from '../src/map/grid.js';
@@ -9,14 +9,16 @@ import { TowerSystem } from '../src/sim/towers.js';
 import { Economy } from '../src/sim/economy.js';
 import { findPath } from '../src/core/pathfinding.js';
 import { mulberry32 } from '../src/core/rng.js';
-import { waveSpec } from '../src/config/waves.js';
+import { waveSpec, WAVE_SETTINGS } from '../src/config/waves.js';
+import { getDifficulty } from '../src/config/difficulty.js';
+import { ECON } from '../src/config/economy.js';
 const seed = +(process.argv[2] || 1), maxTowers = +(process.argv[3] || 16), strat = process.argv[4] || 'mix';
-const m = generateMap(formatMapId({ theme: 'FOREST', edition: 2026, seed: seed * 104729 & 0x3fffffff })), grid = new Grid(m), rng = mulberry32(seed), eco = new Economy();
-let hp = 3, inv = 0, leaks = 0; const p = { x: m.playerStart.x + 0.5, y: m.playerStart.y + 0.5, r: 0.3, dead: false, takeDamage() { if (inv > 0 || this_dead()) return false; leaks++; if (process.env.IMMORTAL) { inv = 1.2; return false; } hp--; inv = 1.2; if (hp <= 0) p.dead = true; return true; } };
+const m = generateMap(formatMapId({ theme: 'FOREST', edition: +(process.env.EDITION || 2027), seed: seed * 104729 & 0x3fffffff })), grid = new Grid(m), rng = mulberry32(seed), diff = getDifficulty(process.env.DIFF || 'easy'), eco = new Economy({ ...ECON, startGold: diff.startGold });
+let hp = diff.playerHp, inv = 0, leaks = 0; const p = { x: m.playerStart.x + 0.5, y: m.playerStart.y + 0.5, r: 0.3, dead: false, takeDamage() { if (inv > 0 || this_dead()) return false; leaks++; if (process.env.IMMORTAL) { inv = 1.2; return false; } hp -= diff.contactDamage; inv = 1.2; if (hp <= 0) p.dead = true; return true; } };
 const this_dead = () => p.dead;
-const world = new MonsterWorld(grid, { onKill: (mo) => eco.add(mo.reward) }, rng);
-const gate = m.gates[+(process.argv[5] || 0)], ts = new TowerSystem({ grid, world, economy: eco, gates: [gate], rng });
-const dir = new WaveDirector({ grid, world, gates: [gate], rng });
+const world = new MonsterWorld(grid, { onKill: (mo) => eco.add(mo.reward) }, rng, { contactDamage: diff.contactDamage });
+const gate = m.gates[+(process.argv[5] || 0)], ts = new TowerSystem({ grid, world, economy: eco, gates: [gate], rng, diff });
+const dir = new WaveDirector({ grid, world, gates: [gate], rng, diff, maxActive: diff.maxActive, settings: { ...WAVE_SETTINGS, firstWaveDelay: diff.firstWaveDelay, interval: diff.waveInterval, spawnPerSecond: diff.spawnPerSecond } });
 const path = findPath(grid, gate.x, gate.y, m.playerStart.x, m.playerStart.y);
 const cands = []; // ô quanh đường đi, cách người chơi 4..16 ô
 for (let i = 0; i < path.length; i++) { const d = path.length - i; if (d < 4 || d > 18) continue; for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { const x = path[i].x + dx, y = path[i].y + dy; if (Math.abs(dx) + Math.abs(dy) >= 2 && !cands.some((c) => c.x === x && c.y === y)) cands.push({ x, y }); } }

@@ -2,7 +2,7 @@
 
 Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite + Capacitor** (web → APK). Build APK bằng **GitHub Actions**.
 
-## Trạng thái hiện tại: Giai đoạn 5 (v0.5.2) – nhiều người chơi
+## Trạng thái hiện tại: v0.5 (nâng cấp toàn diện trên nền Giai đoạn 4)
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -11,7 +11,7 @@ Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite
 | Hậu xử lý + kiểm tra: không vùng cô lập, 8 cổng đều nối tới trung tâm, lối đi ≥ 2 ô, mật độ vật cản | ✅ 300 seed pass |
 | Map ID tái tạo chính xác, có phiên bản thuật toán (`edition`) | ✅ |
 | Nhân vật nông dân + animation đứng/đi/chạy/xây/bị đánh/chết, màu áo tùy chọn, tên | ✅ (xây/bị đánh/chết chỉ xem được bằng phím debug, chưa có gameplay gọi) |
-| Điều khiển: chạm để đi (A*), joystick ảo đa điểm, WASD khi chạy trên máy tính | ✅ (chưa thử trên thiết bị thật) |
+| Điều khiển: joystick ảo đa điểm, WASD khi chạy trên máy tính (đã bỏ chạm để đi từ v0.5) | ✅ (chưa thử trên thiết bị thật) |
 | Va chạm với cây/đá/sông, Y-sorting, minimap, lưu tên/màu áo, vùng an toàn tai thỏ | ✅ (chưa thử trên thiết bị thật) |
 | Slime 5 màu (xanh lá/xanh dương/tím/đỏ/vàng, khác kích thước + chi tiết), animation đứng/nhảy/chết, nhấp nháy khi trúng đòn | ✅ |
 | 8 cổng, chọn cổng rải đều theo số người chơi, xuất hiện ngẫu nhiên trong vùng 5x5 hợp lệ của cổng | ✅ (đơn: 1 cổng) |
@@ -32,43 +32,28 @@ Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite
 | 100 đợt: đồng hồ đếm ngược, cảnh báo 5s trước đợt mới, số slime mỗi đợt, tổng slime tồn tại, banner đợt mới, mốc thử thách 10/20/…/100, vàng thưởng tăng theo đợt | ✅ |
 | Màn **chiến thắng** (diệt hết sau đợt 100) / **thất bại** (nhân vật chết) + thống kê: slime diệt, vàng kiếm được, số tháp, sát thương, thời gian sống sót; lưu kỷ lục đợt; chơi lại cùng Map ID | ✅ |
 | Tạm dừng (nút ⏸, chơi đơn) | ✅ |
-| **Multiplayer**: máy chủ Node.js server-authoritative (dùng lại đúng mã mô phỏng của chế độ đơn); server quyết định sinh quái, sát thương, vàng, xây/nâng cấp/nhánh, thời gian đợt, kết quả trận. Tối đa 8 người, n người = n cổng quái | ✅ có test (bộ nhớ + WebSocket thật trên localhost) |
-| Phòng: mã 6 ký tự, vào bằng mã, link mời (`/?room=CODE` trên web, `survivaltd://join?room=CODE` trên Android), tên + màu áo **không trùng** trong phòng (server ép), chủ phòng đổi bản đồ/bật tắt hồi sinh/bắt đầu, chuyển chủ khi chủ rời | ✅ logic có test; ⚠️ link Android chưa thử trên máy |
-| Đồng bộ: Map ID + checksum bản đồ, snapshot 20 Hz (quái 10 Hz) gồm vị trí người chơi, quái, tháp, mũi tên, HP, vàng, đợt, đồng hồ, trạng thái kỹ năng; hiệu ứng qua sự kiện | ✅ máy khách dựng lại khớp server (có test) |
-| Chống gian lận/trùng: lệnh có id (gửi lại cùng id không bị trừ vàng/xây hai lần), kiểm tra tốc độ + va chạm di chuyển (kéo về nếu sai), giới hạn tần suất + kích thước tin, kiểm tra phiên bản giao thức + cấu hình cân bằng | ✅ có test |
-| Mất kết nối: giữ chỗ 60s, nhân vật đứng yên + không bị quái nhắm tới, tự vào lại bằng token và nhận lại đúng trạng thái; quá hạn thì bị loại | ✅ có test (đầu-cuối) |
-| Hồi sinh (tùy chọn phòng, 15s) + thua chung khi cả đội cùng bị hạ; thắng khi diệt hết sau đợt 100; thống kê chung | ✅ có test |
-| Âm thanh/nhạc nền, cấu hình chất lượng đồ họa thấp/trung/cao | ⏳ chưa làm |
+| Multiplayer, server, phòng, link mời | ⏳ Giai đoạn 5 |
+| Cấu hình chất lượng đồ họa thấp/trung/cao | ⏳ chưa làm (hiệu ứng đã tự giảm mật độ khi quá tải) |
+
+### Nâng cấp v0.5
+| Hạng mục | Chi tiết |
+|---|---|
+| Âm thanh | `systems/Audio.js`: tổng hợp bằng WebAudio (không cần file, chạy offline), nhạc nền nhiều lớp (menu/calm/battle tự đổi theo cường độ trận), SFX cho UI, xây/nâng cấp/tiến hóa, bắn từng hệ, trúng/chí mạng, quái, kỹ năng, đợt/thử thách, thắng/thua. Bus nhạc và hiệu ứng tách riêng, bật/tắt + âm lượng riêng |
+| 5 độ khó | `config/difficulty.js` là nơi DUY NHẤT chứa thông số (máu, tốc độ, số lượng, quái mạnh xuất hiện sớm, nhịp đợt, vàng, sức mạnh tháp, giá, hồi chiêu, sát thương chạm). Dễ = hành vi cũ + máu ×1,5. Chọn ở menu, áp dụng đồng bộ cả trận, kỷ lục lưu riêng từng độ khó |
+| Giá tháp | Cố định (không tăng theo số tháp/thời gian): 60 ở Dễ/Thường/Khó; 75 Rất Khó; 95 Ác Mộng |
+| Chiến đấu | Thanh máu trên đầu quái (vệt trắng tụt dần, tự ẩn sau 3s), số sát thương nổi (thường: trắng nhỏ; chí mạng: vàng to bật nảy + "!"; cháy/băng có màu riêng), ánh sáng cộng màu, vệt đạn, va chạm riêng cho tên/băng/lửa. Hiệu ứng tự giảm mật độ khi quá đông (`config/fx.js`) |
+| Bản đồ | Nền/sông/hồ/đá lấy từ `Background.png`, cây từ `Tree.png` (loài chia theo vùng: sồi, thông, vườn táo, hoa anh đào, phong đỏ, tre). Cây lay nhẹ, lá/cánh hoa rơi. Nền nướng theo mảng khi camera tới gần (bộ nhớ ổn định). Thuật toán **edition 2027** dựng bố cục có chủ đề: quảng trường lát đá, 8 đường quanh co ra 8 cổng, sông vòng cung có bến, hồ + bãi cát, mỗi cung một chủ đề (rừng / vườn cây thành hàng / cụm đá / đồng cỏ), vành đai rừng. Edition 2026 giữ nguyên để Map ID cũ vẫn tái tạo |
+| Tháp | Hình từ `Tower.png`: LV1–4 hình đầu; LV5, 7, 9, 12, 15 tiến hóa (hiệu ứng chớp + vòng sáng + âm thanh). Ánh sáng riêng theo nhánh (vàng/xanh băng/cam lửa) và cấp |
+| Điều khiển | Đã bỏ hoàn toàn chạm để di chuyển. Chạm bản đồ chỉ chọn tháp. Di chuyển: joystick / WASD |
+| Màn hình | Dọc / Ngang / Tự xoay; khi ngang: 19.5:9, 16:9 hoặc Toàn màn hình. Tầm nhìn camera: thanh kéo 7–26 ô + 3 mức Gần (9, như cũ) / Xa (13) / Rộng (18) |
+| Cài đặt & UI | Menu Cài đặt thống nhất (menu chính, tạm dừng, nút ⚙ trong ván). Font Montserrat toàn game. Nút điều khiển mới có khung viền, trạng thái nhấn/sẵn sàng/kích hoạt/hồi chiêu; joystick mới; HUD có khung và thanh đếm ngược đợt |
+
+Chỉnh nhanh: `config/difficulty.js` (độ khó), `config/fx.js` (hiệu ứng), `config/art.js` (hình, kích thước hiển thị, vùng loài cây), `config/settings.js` (mặc định cài đặt).
 
 Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi trái/phải, chưa có mặt sau); nước chưa có animation; đồ họa đang vẽ bằng code (có thể thay bằng sprite sheet thật, giữ nguyên key/kích thước ở `src/render`).
 
-## Multiplayer – cách chạy
-Máy chủ không cần cài thêm gói nào (WebSocket tự viết bằng module có sẵn của Node 20+).
-```bash
-# Cần Node 20+ (test chạy được cả Node 20 nhờ client WebSocket dự phòng)
-npm install && npm run build   # build bản web (để máy chủ phục vụ luôn trang chơi)
-npm run server                 # http://localhost:8080  (WebSocket: ws://localhost:8080/ws, kiểm tra: /health)
-```
-- **Chơi thử trên máy tính:** chạy server rồi mở `http://localhost:8080` bằng 2 tab/2 máy → "Nhiều người chơi" → một bên "Tạo phòng", bên kia nhập mã → chủ phòng bấm Bắt đầu.
-- **Triển khai thật:** `docker build -t std-server . && docker run -p 8080:8080 std-server`, hoặc dùng `render.yaml` (Render cấp HTTPS/WSS). Trên VPS riêng đặt sau reverse proxy có TLS.
-- **APK cần `wss://`** (WebView dùng https nên chặn `ws://`). Nhập địa chỉ `wss://<tên-miền>/ws` ở ô "Địa chỉ máy chủ"; trang web do chính server phục vụ thì tự điền sẵn. Link mời gửi dạng `https://<tên-miền>/?room=CODE`.
-- **Link mời trên Android:** workflow tự thêm intent-filter `survivaltd://join` (`tools/patch-manifest.mjs`) và dùng `@capacitor/app`. ⚠️ Chưa thử trên thiết bị; link `https` mở thẳng app (App Links) **chưa làm** vì cần xác minh tên miền.
-
-Giả định thiết kế (có thể đổi): **vàng dùng chung cả đội**; vị trí di chuyển do máy khách báo nhưng server kiểm tra tốc độ/va chạm; không vào giữa ván (chỉ vào lại bằng token); mọi máy phải cùng phiên bản game (server từ chối nếu khác giao thức/cấu hình cân bằng). Băng thông đo được: ~45 KB/s mỗi máy khi có 150 quái (≈160 MB/giờ).
-
-### Thử multiplayer bằng APK (điện thoại) – cách nhanh nhất
-APK **không có sẵn máy chủ**: nút "Tạo phòng" chỉ hoạt động khi có máy chủ đang chạy và bạn nhập đúng địa chỉ.
-1. **Thử trên Wi-Fi nhà (không cần Internet):** trên máy tính chạy `npm install && npm run build && npm run server`. Xem IP máy tính (Windows: `ipconfig`, ví dụ `192.168.1.10`), cho phép cổng 8080 qua tường lửa. Trong app: Nhiều người chơi → địa chỉ máy chủ `ws://192.168.1.10:8080/ws` → Tạo phòng. Người thứ hai có thể là trình duyệt trên máy tính (`http://192.168.1.10:8080`) hoặc điện thoại khác cùng Wi-Fi, nhập mã phòng để vào.
-2. **Chơi qua Internet:** triển khai server (Docker/`render.yaml`) rồi dùng `wss://<tên-miền>/ws`.
-
-APK debug bật `usesCleartextTraffic` và dùng `androidScheme: http` để cho phép `ws://` khi thử nội bộ (`tools/patch-manifest.mjs`, `capacitor.config.json`). Khi phát hành thật chỉ dùng `wss://` thì nên bỏ cleartext. Trong APK ô địa chỉ máy chủ **không** tự điền (vì `localhost` là chính app).
-
-### Những gì CHƯA được kiểm chứng
-- Chưa chạy trên **hai điện thoại thật** qua Internet (yêu cầu của đặc tả). Đã kiểm thử: logic server (bộ nhớ), hai client qua WebSocket thật trên localhost (tạo/vào phòng, đồng bộ, xây tháp, mất kết nối + vào lại), và chạy thử scene nhiều người với Phaser giả lập. Chưa kiểm tra: độ trễ mạng thật, hiển thị trên thiết bị, 8 người cùng lúc, tải của server.
-- Hồi sinh/độ trễ: khi ping cao, nhân vật của bạn có thể bị server kéo về nếu báo vị trí quá nhanh (kiểm tra có dung sai nhưng chưa tinh chỉnh trên mạng thật).
-
 ## Cân bằng 100 đợt (đo bằng mô phỏng)
-`node tools/balance.mjs <seed> <số tháp tối đa>` chạy một bot đứng yên ở giữa bản đồ, tự xây/nâng tháp (đặt `IMMORTAL=1` để bot bất tử và chỉ đếm slime lọt qua). Kết quả với bộ thông số hiện tại (3 bản đồ, bot đơn giản, tối đa 16 tháp, người chơi bất tử):
+`DIFF=easy|normal|hard|veryHard|nightmare node tools/balance.mjs <seed> <số tháp tối đa>` chạy một bot đứng yên ở giữa bản đồ, tự xây/nâng tháp (đặt `IMMORTAL=1` để bot bất tử và chỉ đếm slime lọt qua). Kết quả với bộ thông số hiện tại (3 bản đồ, bot đơn giản, tối đa 16 tháp, người chơi bất tử):
 - Slime lọt tới người chơi bắt đầu xuất hiện quanh đợt ~20 và tăng dần về cuối; hàng chờ quái tồn đọng nhiều ở các đợt 80–100.
 - Bot thắng đợt 100 ở 2/3 bản đồ; bản đồ còn lại hết thời gian mô phỏng ở đợt 100.
 - Bot **không** chạy kéo quái và không dùng kỹ năng nên là cận dưới; bot đứng yên với 3 HP thật thì thua quanh đợt 21 vì để slime lọt. Đây là đo trên mô phỏng, chưa phải người chơi thật: cần chơi thử để chỉnh tiếp `config/waves.js`, `towers.js`, `economy.js`.
@@ -95,18 +80,19 @@ cd android && ./gradlew assembleDebug   # APK: android/app/build/outputs/apk/deb
 ```
 
 ## Map ID
-`FOREST-2026-A8F72K` = `chủ đề`-`phiên bản thuật toán`-`seed`; kích thước khác 100 thì thêm hậu tố, ví dụ `FOREST-2026-A8F72K-150`.
-Cùng ID cho đúng cùng bản đồ trên mọi thiết bị. **Không sửa** `src/map/generators/forest2026.js` sau khi phát hành; muốn đổi thuật toán hãy thêm `forest2027.js` và đăng ký trong `generators/index.js`.
+`FOREST-2027-A8F72K` = `chủ đề`-`phiên bản thuật toán`-`seed` (bản đồ mới dùng 2027; ID 2026 cũ vẫn chạy); kích thước khác 100 thì thêm hậu tố, ví dụ `FOREST-2026-A8F72K-150`.
+Cùng ID cho đúng cùng bản đồ trên mọi thiết bị. **Không sửa** `forest2026.js` / `forest2027.js` sau khi phát hành; muốn đổi thuật toán hãy thêm edition mới (ví dụ `forest2028.js`) và đăng ký trong `generators/index.js`.
 
 ## Cấu trúc
 ```
 src/core/      rng/noise tất định, heap, A*, flow field
-server/        máy chủ multiplayer (ws.js WebSocket tối giản, gameServer.js định tuyến, room.js mô phỏng + phòng, index.js HTTP + web)
-src/net/       giao thức, NetClient (tự nối lại), Mirror (gương trạng thái), GameSession
 src/sim/       logic thuần: monster, world, director, towers (xây/nâng cấp/nhánh/bắn), economy – kiểm thử được không cần Phaser
 src/systems/   cầu nối sim → Phaser (MonsterRenderer, pooling sprite)
 src/config/    cấu hình chung, chủ đề (themes/)
-src/map/       tiles, mapId, generators/ (theo phiên bản), validate, grid, gates
+src/map/       tiles, mapId, generators/ (theo phiên bản), postprocess (dùng chung), validate, grid, gates
+src/render/    world.js (nền theo mảng, cây/đá, lá rơi), uiTextures, towerTextures (hiệu ứng), farmer, slime
+src/ui/        screen (hướng/tỷ lệ), settingsPanel, ActionButton, panels
+public/assets/ tile, vật thể, cây, tháp (cắt từ Background/Tree/Tower.png)
 src/render/    texture pixel art, sprite nông dân
 src/entities/  Player
 src/input/     Joystick

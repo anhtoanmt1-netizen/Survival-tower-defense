@@ -37,9 +37,10 @@ test('chỉ số: tăng theo cấp; mốc nhánh LV3,5,7,9,12; hiệu ứng từ
   assert.ok(computeStats('archer', 9, ['burn', 'burn', 'burn', 'burn']).spreadChance > 0);
   assert.ok(computeStats('archer', 5, ['volley', 'volley']).fireRate > computeStats('archer', 5, []).fireRate);
 });
-test('kinh tế: 120 vàng xây được 1 tháp 60, tháp thứ 2 đắt hơn nên chưa đủ; nâng cấp 45/70; bán hoàn 60% tổng đầu tư', () => {
+test('kinh tế: 120 vàng xây được 2 tháp, giá CỐ ĐỊNH 60 (không tăng theo số tháp); nâng cấp 45/70; bán hoàn 60% tổng đầu tư', () => {
   const c = setup(); const a = freeCell(c); const r = c.ts.build(a.x, a.y, [c.p]); assert.ok(r.ok); assert.equal(c.economy.gold, 60);
-  assert.ok(c.ts.buildCost() > 60); const b = freeCell(c, -3, 0); const r2 = c.ts.build(b.x, b.y, [c.p]); assert.equal(r2.ok, false); assert.equal(r2.reason, 'gold'); assert.equal(c.economy.gold, 60);
+  assert.equal(c.ts.buildCost(), 60); const b = freeCell(c, -3, 0); const r2 = c.ts.build(b.x, b.y, [c.p]); assert.ok(r2.ok); assert.equal(c.economy.gold, 0, 'tháp thứ 2 vẫn 60'); assert.equal(c.ts.buildCost(), 60);
+  const b3 = freeCell(c, 0, 4); const r3 = c.ts.build(b3.x, b3.y, [c.p]); assert.equal(r3.ok, false); assert.equal(r3.reason, 'gold'); c.ts.sell(r2.tower); c.economy.gold = 60;
   assert.equal(upgradeCost(1), 45); assert.equal(upgradeCost(2), 70); assert.ok(upgradeCost(3) > 70 && upgradeCost(4) > upgradeCost(3));
   const t = r.tower; advance(c, 2.1); assert.equal(t.state, 'ready'); c.economy.add(100);
   assert.ok(c.ts.upgrade(t).ok); assert.equal(c.economy.gold, 60 + 100 - 45); assert.equal(t.invested, 105);
