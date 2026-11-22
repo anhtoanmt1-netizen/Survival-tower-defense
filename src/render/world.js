@@ -4,11 +4,15 @@ import { makeNoise } from '../core/rng.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { GROUND_RES, TILE_FEATHER, BASE_GRASS, TILES, ROCKS, BUSH, TREE_ZONES, TREE_DISPLAY, ROCK_DISPLAY, BUSH_DISPLAY, assetManifest } from '../config/art.js';
 import { FX } from '../config/fx.js';
+import { ASSET_MANIFEST } from '../map/terrain/registryIndex.js';
+import { rockSprite, treeSpecies } from '../map/terrain/autoterrain.js';
+import { TERRAIN_THEMES } from '../map/terrain/themes.js';
+import { F } from '../map/terrain/classes.js';
 const TS = GAME_CONFIG.tileSize, CH = 16, PAD = 10, vh = (x, y) => (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
 
-export function preloadWorldAssets(scene) { scene.load.setPath('assets/'); for (const [k, f] of assetManifest()) scene.load.image(k, f); }
+export function preloadWorldAssets(scene, terrain = false) { scene.load.setPath('assets/'); for (const [k, f] of assetManifest()) scene.load.image(k, f); if (terrain) for (const [k, f] of ASSET_MANIFEST) scene.load.image(k, f); }
 // Tranh sơn dầu không phải pixel art -> lọc tuyến tính cho mượt (game vẫn pixelArt cho sprite nhân vật/slime)
-export function smoothWorldTextures(scene) { for (const [k] of assetManifest()) scene.textures.get(k).setFilter(Phaser.Textures.FilterMode.LINEAR); }
+export function smoothWorldTextures(scene) { for (const [k] of [...assetManifest(), ...ASSET_MANIFEST]) if (scene.textures.exists(k)) scene.textures.get(k).setFilter(Phaser.Textures.FilterMode.LINEAR); }
 
 // Nền: nướng thành các mảng 16x16 ô khi camera tới gần, hủy khi ở xa -> bộ nhớ ổn định kể cả bản đồ 400x400.
 export class GroundRenderer {
@@ -54,10 +58,14 @@ const LEAF = { 0: [0xff7a2a, 0xd9421a], 2: [0xffb7d0, 0xff8fb5], 3: [0xff6a6a, 0
 export class ObjectLayer {
   constructor(scene, map) {
     this.scene = scene; this.trees = []; this.vis = []; this.t = 0;
-    const zone = makeNoise((map.seed ^ 0x51ed270b) >>> 0), { width: W, height: H, tiles } = map;
+    const zone = makeNoise((map.seed ^ 0x51ed270b) >>> 0), { width: W, height: H, tiles } = map, terr = !!map.cls, th = terr ? TERRAIN_THEMES[map.terrain.themeCode] : null;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const t = tiles[y * W + x]; if (t !== T.TREE && t !== T.ROCK && t !== T.BUSH) continue;
       const h = vh(x, y), by = y * TS + TREE_DISPLAY.baseY, jx = ((h & 7) - 3.5) * 0.9, jy = (((h >> 3) & 7) - 3.5) * 0.6;
+      if (terr && t === T.ROCK && map.feat[y * W + x] === F.CLIFF) continue; // vách đã được ghép vào nền
+      if (terr && t === T.TREE) { const sp = treeSpecies(map, x, y, zone, th.zones, TREE_ZONES), k = 0.92 + ((h >> 10) & 15) / 100; const img = scene.add.image(x * TS + 16 + jx, by + jy, 'tree_' + sp).setOrigin(0.5, 1).setScale(TREE_DISPLAY.texScale * k).setDepth(by + jy).setFlipX(!!(h & 0x100)); this.trees.push({ img, x: img.x, y: img.y, ph: (h % 628) / 100, spd: 0.9 + ((h >> 4) % 7) / 10, amp: 0.012 + ((h >> 8) % 9) / 500, leaf: LEAF[sp] || LEAF.default }); continue; }
+      if (terr && t === T.ROCK) { const r = rockSprite(map, x, y), tx = scene.textures.get(r.id).getSourceImage(); scene.add.image(x * TS + 16 + jx, by + 2, r.id).setOrigin(0.5, 1).setScale((1.5 * TS) / tx.width).setDepth(by).setFlipX(r.flipX); continue; }
+      if (terr && t === T.BUSH) { const tx = scene.textures.get('bush_cluster').getSourceImage(); scene.add.image(x * TS + 16 + jx, by + 1, 'bush_cluster').setOrigin(0.5, 1).setScale(((0.95 + ((h >> 5) & 7) / 40) * TS) / tx.width).setDepth(by).setFlipX(!!(h & 0x20)); continue; }
       if (t === T.TREE) {
         const z = TREE_ZONES[Math.min(TREE_ZONES.length - 1, Math.floor(Math.max(0, Math.min(0.999, (zone(x * 0.045 + 3, y * 0.045 + 3) - 0.25) / 0.5)) * TREE_ZONES.length))], sp = z.species[(h >> 6) % z.species.length], k = 0.92 + ((h >> 10) & 15) / 100;
         const img = scene.add.image(x * TS + 16 + jx, by + jy, 'tree_' + sp).setOrigin(0.5, 1).setScale(TREE_DISPLAY.texScale * k).setDepth(by + jy).setFlipX(!!(h & 0x100));

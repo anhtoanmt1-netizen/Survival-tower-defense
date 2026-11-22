@@ -26,6 +26,7 @@
   button.primary { background:linear-gradient(180deg,#f3cd5c,var(--accent) 55%,var(--accent2)); color:#2b1f06; font-weight:800; border-bottom-color:#5a4210; }
   #swatches { display:flex; gap:8px; flex-wrap:wrap; } #swatches button { width:40px; height:40px; min-height:0; padding:0; border-radius:50%; border:3px solid transparent; box-shadow:0 2px 0 #0006; transition:transform .12s,border-color .12s; }
   #swatches button.sel { border-color:#fff; transform:scale(1.12); } .row { display:flex; gap:8px; } .row > * { flex:1; }
+  select { font:inherit; font-weight:600; padding:11px 10px; border-radius:10px; border:1.5px solid #ffffff2a; background:#0005; color:var(--ink); min-height:44px; } select:focus { outline:none; border-color:var(--accent); } select option { background:#1a2b21; }
   #err { color:var(--bad); min-height:1.2em; font-size:13px; font-weight:600; } small { opacity:.75; font-weight:500; }
   /* chọn độ khó */
   #diffs { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
@@ -84,11 +85,12 @@
     <label>Tên nhân vật<input id="name" type="text" autocomplete="off" /></label>
     <label>Màu áo (cũng là màu của bạn trên minimap)<div id="swatches"></div></label>
     <label>Độ khó<div id="diffs"></div><span id="diffdesc"></span></label>
-    <label>Mã bản đồ (để trống = ngẫu nhiên)<input id="mapid" type="text" placeholder="FOREST-2027-A8F72K" autocapitalize="characters" autocomplete="off" /></label>
+    <label>Bản đồ mới<div class="row"><select id="mtheme" aria-label="Chủ đề bản đồ"></select><select id="msize" aria-label="Kích thước bản đồ"><option value="100">100 × 100</option><option value="150">150 × 150</option><option value="200">200 × 200</option></select></div><small id="mthemedesc"></small></label>
+    <label>Mã bản đồ (để trống = tạo mới theo lựa chọn trên)<input id="mapid" type="text" placeholder="RIVER-2028-A8F72K" autocapitalize="characters" autocomplete="off" /></label>
     <div id="err"></div>
     <div class="row"><button id="random" type="button">Tạo mã ngẫu nhiên</button><button id="start" class="primary" type="button">Bắt đầu</button></div>
     <button id="menuset" type="button">⚙ Cài đặt (âm thanh, màn hình, camera)</button>
-    <small id="best"></small><small>Phiên bản 0.5 – âm thanh, 5 độ khó, bản đồ mới, tháp tiến hóa, màn hình ngang. Chưa có multiplayer.</small>
+    <small id="best"></small><small>Phiên bản 0.6 – 7 chủ đề bản đồ tự sinh, 3 kích thước, 5 độ khó, âm thanh, tháp tiến hóa, màn hình ngang. Chưa có multiplayer.</small>
   </div>
 </div>
 </div>

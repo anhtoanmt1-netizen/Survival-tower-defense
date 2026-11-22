@@ -1,11 +1,12 @@
 import { DEFAULT_DIFFICULTY, DIFFICULTIES } from './difficulty.js';
+import { TERRAIN_THEME_CODES } from '../map/terrain/themes.js';
 // Cài đặt người dùng (lưu localStorage, một nơi duy nhất). Đọc: settings.data; ghi: settings.set({...}); lắng nghe: settings.on(fn).
 const KEY = 'std.settings.v1'; // giữ khóa cũ để không mất tên/màu áo/kỷ lục
 export const VIEW_PRESETS = { near: 9, far: 13, wide: 18 };     // số ô nhìn thấy theo cạnh NGẮN của màn hình
 export const VIEW_RANGE = { min: 7, max: 26, step: 0.5 };
 export const RATIOS = { '19.5:9': 19.5 / 9, '16:9': 16 / 9, full: 0 };
 export const DEFAULTS = {
-  name: 'Nông dân', shirt: null, lastMapId: '', bestWave: 0, bestWaves: {}, difficulty: DEFAULT_DIFFICULTY,
+  name: 'Nông dân', shirt: null, lastMapId: '', bestWave: 0, bestWaves: {}, difficulty: DEFAULT_DIFFICULTY, mapTheme: 'random', mapSize: 100,
   audio: { music: true, sfx: true, musicVol: 0.6, sfxVol: 0.85 },
   display: { orientation: 'portrait', ratio: 'full', view: VIEW_PRESETS.near },
 };
@@ -17,6 +18,7 @@ function sanitize(o) {
   if (!(o.display.ratio in RATIOS)) o.display.ratio = 'full';
   o.display.view = clamp(+o.display.view || VIEW_PRESETS.near, VIEW_RANGE.min, VIEW_RANGE.max);
   if (!DIFFICULTIES[o.difficulty]) o.difficulty = DEFAULT_DIFFICULTY;
+  if (![100, 150, 200].includes(+o.mapSize)) o.mapSize = 100; o.mapSize = +o.mapSize; if (o.mapTheme !== 'random' && !TERRAIN_THEME_CODES.includes(o.mapTheme)) o.mapTheme = 'random';
   return o;
 }
 class Settings {

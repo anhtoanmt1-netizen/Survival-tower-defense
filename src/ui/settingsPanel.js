@@ -36,7 +36,7 @@ export function initSettingsPanel({ onToggle, onCopy, onPause, onMenu }) {
   cp.onclick = () => Promise.resolve(onCopy?.()).then(() => { cp.textContent = 'Đã chép'; setTimeout(() => (cp.textContent = 'Chép mã'), 1200); }); run.append(idEl, cp);
   const bar = el('div', 'seg'), bp = el('button', '', '⏸ Tạm dừng'), bm = el('button', '', '⌂ Về menu'); bp.type = bm.type = 'button';
   bp.onclick = () => { setOpen(false); onPause?.(); }; bm.onclick = () => { if (confirm('Thoát về menu? Ván hiện tại sẽ mất.')) { setOpen(false); onMenu?.(); } }; bar.append(bp, bm);
-  s0.append(el('h3', '', '🎮 Ván đang chơi'), el('div', 'hint', 'Mã bản đồ'), run, bar);
+  const hint0 = el('div', 'hint', 'Mã bản đồ'); s0.append(el('h3', '', '🎮 Ván đang chơi'), hint0, run, bar);
   body.append(s0, s1, s2, s3, s4);
   function refresh() {
     rows.forEach((f) => f()); orient.redraw(); ratio.redraw(); presets.redraw(); view.r.redraw();
@@ -45,6 +45,6 @@ export function initSettingsPanel({ onToggle, onCopy, onPause, onMenu }) {
   settings.on(refresh); refresh();
   const setOpen = (v) => { open = v; $('settings').hidden = !v; if (v) { refresh(); audio.play('open'); } else audio.play('close'); onToggle?.(v); };
   $('setclose').onclick = () => setOpen(false); $('settings').addEventListener('pointerdown', (e) => { if (e.target === $('settings')) setOpen(false); });
-  const setRun = (id) => { s0.hidden = !id; idEl.textContent = id || ''; };
+  const setRun = (id, info = '') => { s0.hidden = !id; idEl.textContent = id || ''; hint0.textContent = info ? 'Chủ đề: ' + info : 'Mã bản đồ'; };
   return { setRun, open: () => setOpen(true), close: () => setOpen(false), isOpen: () => open };
 }

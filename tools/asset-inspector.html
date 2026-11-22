@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Asset Inspector – địa hình</title>
+<style>
+ body{margin:0;font:13px/1.4 system-ui,sans-serif;background:#16211a;color:#eef3ea;display:grid;grid-template-columns:minmax(300px,46%) 1fr;height:100vh}
+ aside{overflow:auto;padding:10px;border-right:1px solid #ffffff22} main{overflow:auto;padding:12px}
+ h1{font-size:15px;margin:0 0 8px} .bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px} button,select,input{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid #ffffff33;background:#24382a;color:inherit}
+ #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px} .card{background:#0004;border:2px solid transparent;border-radius:8px;padding:4px;cursor:pointer;text-align:center;font-size:10px}
+ .card.sel{border-color:#e0b13a} .card img{width:100%;height:70px;object-fit:contain;background:repeating-conic-gradient(#2c3a30 0 25%,#1f2b23 0 50%) 0 0/12px 12px}
+ .tag{display:inline-block;padding:0 5px;border-radius:99px;background:#e0b13a33;margin:1px;font-size:10px} label{display:grid;grid-template-columns:90px 1fr;gap:6px;margin:4px 0;align-items:center}
+ canvas{max-width:100%;background:repeating-conic-gradient(#2c3a30 0 25%,#1f2b23 0 50%) 0 0/16px 16px;border:1px solid #ffffff22} .warn{color:#ffcf6b}
+</style></head><body>
+<aside><h1>Asset Inspector <small id="count"></small></h1>
+ <div class="bar"><select id="fg"><option value="">Tất cả nhóm</option></select><input id="q" placeholder="tìm id / loại…"><button id="exp">Xuất JSON metadata</button><button id="expcrop">Xuất manual_crops.json</button></div>
+ <div class="bar"><label style="grid-template-columns:auto auto">Sheet gốc (kiểm tra crop):<input id="sheet" type="file" accept="image/png"></label></div>
+ <div id="grid"></div></aside>
+<main><div id="detail">Chọn một asset ở bên trái.</div><canvas id="cv" width="10" height="10"></canvas><p class="hint">Khung vàng = vùng sử dụng thực tế (usable, alpha&gt;200). Có sheet gốc: khung đỏ = bbox trên sheet; sửa số rồi bấm "Xuất manual_crops.json" để ghi đè crop tự động.</p>
+ <canvas id="sheetcv" width="10" height="10"></canvas></main>
+<script type="module">
+import { REGISTRY } from '/src/map/terrain/registry.js';
+const reg = structuredClone(REGISTRY), crops = {}; let sel = null, sheetImg = null;
+const $ = (i) => document.getElementById(i), groups = [...new Set(reg.map((a) => a.group))];
+$('fg').innerHTML += groups.map((g) => `<option>${g}</option>`).join(''); $('count').textContent = `(${reg.length})`;
+function grid() { const g = $('fg').value, q = $('q').value.toLowerCase(); $('grid').innerHTML = ''; reg.filter((a) => (!g || a.group === g) && (a.id + a.sub + a.name).toLowerCase().includes(q)).forEach((a) => { const d = document.createElement('div'); d.className = 'card' + (a === sel ? ' sel' : ''); d.innerHTML = `<img src="/assets/${a.src}"><div>${a.id}</div><span class="tag">${a.sub}</span>`; d.onclick = () => { sel = a; grid(); detail(); }; $('grid').appendChild(d); }); }
+function field(a, k, type = 'text') { return `<label>${k}<input data-k="${k}" type="${type}" ${type === 'checkbox' ? (a[k] ? 'checked' : '') : `value="${a[k]}"`}></label>`; }
+function detail() { const a = sel; if (!a) return; const e = a.edges;
+  $('detail').innerHTML = `<h1>${a.id} — ${a.name}</h1><div>${a.size.join('×')}px · index ${a.index} · bbox ${a.bbox.join(',')} · usable ${a.usable.join(',')}</div>`
+   + `<label>group<select data-k="group">${groups.map((g) => `<option ${g === a.group ? 'selected' : ''}>${g}</option>`).join('')}</select></label>` + field(a, 'sub') + field(a, 'layer', 'number') + field(a, 'weight', 'number') + field(a, 'flipX', 'checkbox') + field(a, 'flipY', 'checkbox') + field(a, 'rotate', 'checkbox')
+   + ['N', 'S', 'E', 'W'].map((s) => `<label>cạnh ${s}<input data-e="${s}" value="${e[s]}"></label>`).join('')
+   + (a.rotate && a.group === 'D_ROCK_CLIFF' ? '<p class="warn">Cảnh báo: vách đá không nên cho xoay (sai hướng sáng/cỏ trên đỉnh).</p>' : '')
+   + `<label>bbox (sheet)<input data-bbox value="${(crops[a.index] || a.bbox).join(',')}"></label>`;
+  $('detail').querySelectorAll('[data-k]').forEach((el) => el.oninput = () => { const k = el.dataset.k; a[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value; draw(); });
+  $('detail').querySelectorAll('[data-e]').forEach((el) => el.oninput = () => { a.edges[el.dataset.e] = el.value; });
+  $('detail').querySelector('[data-bbox]').oninput = (ev) => { const v = ev.target.value.split(',').map(Number); if (v.length === 4 && v.every(Number.isFinite)) { crops[a.index] = v; drawSheet(); } }; draw(); drawSheet(); }
+function draw() { const a = sel, im = new Image(); im.onload = () => { const s = Math.min(3, 480 / im.width), c = $('cv'); c.width = im.width * s; c.height = im.height * s; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(im, 0, 0, c.width, c.height); x.strokeStyle = '#e0b13a'; x.lineWidth = 2; const u = a.usable; x.strokeRect(u[0] * s, u[1] * s, (u[2] - u[0]) * s, (u[3] - u[1]) * s); }; im.src = `/assets/${a.src}`; }
+function drawSheet() { if (!sheetImg) return; const c = $('sheetcv'), s = Math.min(1, 900 / sheetImg.width); c.width = sheetImg.width * s; c.height = sheetImg.height * s; const x = c.getContext('2d'); x.drawImage(sheetImg, 0, 0, c.width, c.height); x.font = '12px sans-serif';
+  for (const a of reg) { if (a.index < 0) continue; const b = crops[a.index] || a.bbox; x.strokeStyle = a === sel ? '#ff4040' : '#ffffff55'; x.lineWidth = a === sel ? 3 : 1; x.strokeRect(b[0] * s, b[1] * s, (b[2] - b[0]) * s, (b[3] - b[1]) * s); x.fillStyle = '#ffd24a'; x.fillText(a.index, b[0] * s + 3, b[1] * s + 13); } }
+$('sheet').onchange = (e) => { const f = e.target.files[0]; if (!f) return; const im = new Image(); im.onload = () => { sheetImg = im; drawSheet(); }; im.src = URL.createObjectURL(f); };
+const dl = (name, obj) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' })); a.download = name; a.click(); };
+$('exp').onclick = () => dl('registry.edited.json', reg); $('expcrop').onclick = () => dl('manual_crops.json', crops); $('fg').onchange = $('q').oninput = grid; grid();
+</script></body></html>

@@ -50,6 +50,22 @@ Game mobile Android 2D pixel art góc nhìn 3/4. Công nghệ: **Phaser 3 + Vite
 
 Chỉnh nhanh: `config/difficulty.js` (độ khó), `config/fx.js` (hiệu ứng), `config/art.js` (hình, kích thước hiển thị, vùng loài cây), `config/settings.js` (mặc định cài đặt).
 
+### Hệ thống bản đồ địa hình v0.6 (edition 2028)
+Sinh bản đồ từ sprite sheet địa hình mới, **không rải tile ngẫu nhiên**. Toàn bộ nằm ở `src/map/terrain/`.
+
+| Thành phần | Chi tiết |
+|---|---|
+| **Asset Registry** | `registry.js` (sinh bởi `tools/build_terrain_assets.py`): 51 sprite + 7 texture nền, mỗi asset có ID, tên, nhóm A–E, phân loại (Grass_Base, Dirt_Path, Water_Shore_Sand, Cliff_Water_Edge…), kích thước, loại, layer 1–9, trọng số, cho phép lật/xoay, bbox trên sheet, vùng sử dụng thực tế (usable), nhãn kết nối 4 cạnh N/S/E/W. Vách đá **không bao giờ xoay**; chỉ lật ngang khi registry cho phép |
+| **Cắt asset** | `tools/slice_sheet.py` nhận diện vùng alpha (không giả định lưới đều, giữ nguyên pixel rìa), hỗ trợ ghi đè thủ công `tools/manual_crops.json`. `tools/asset-inspector.html` (chạy `npx vite`, mở `/tools/asset-inspector.html`) để kiểm tra bbox/usable, sửa nhóm/metadata, xuất JSON |
+| **Chủ đề** | 7 chủ đề, mỗi chủ đề có hàm bố cục riêng (`layouts.js`): MEADOW, RIVER, HIGHLAND, LAKE, FALLS, COAST, WILD. Map ID dạng `LAKE-2028-A8F72K[-150]`; để trống = chọn chủ đề ngẫu nhiên |
+| **Giai đoạn sinh** | vùng sinh thái Voronoi (méo bằng nhiễu) → sông (spline Catmull-Rom, bề rộng đổi dần)/hồ/biển/cao nguyên → bảo vệ lõi → nước nông–sâu + bờ cát → vách + thác → mạng đường A* 8 hướng + Chaikin (ngã ba, đường cụt, vòng quanh hồ, bến đá qua nước, dốc qua vách) → đất/hoa → cây/đá/bụi theo mật độ vùng → hậu xử lý lối đi → QA, **tự sinh lại với seed phụ (tất định) nếu lỗi** |
+| **Autoterrain** | Nền: trộn các lớp cỏ/hoa/đất/cát/nước nông/nước sâu/đá lát bằng bản đồ lớp bị méo nhiễu → biên bất quy tắc, mềm; bọt sóng ven bờ. Vách: chọn sprite theo hàng xóm (mặt trước / đầu trái / đầu phải / đảo / thác; biến thể ven nước khi phía nam là nước), đối chiếu nhãn cạnh trong registry |
+| **Kích thước** | 100 / 150 / 200 cùng một hệ thống: bề rộng sông, vùng vách, vùng sinh thái co giãn theo kích thước; mật độ vật thể giữ tương đối nhất quán; không kéo giãn hình |
+| **QA** | `qa.js`: không vũng nước rời rạc, vách đúng hướng, không bờ thẳng quá dài, vật thể không phân bố đều (CV), lõi/cổng thông thoáng; cộng với `validate.js` (kết nối 8 cổng, lối ≥ 2 ô) |
+| **Xem trước** | `node tools/preview_map.mjs <MAP-ID> out.png [pixel/ô]` dựng ảnh bằng chính bộ ghép của game |
+
+Giới hạn đã biết (sprite sheet chỉ có vách quay mặt về phía nam, cao 1 ô): vách là các dải thềm 1 ô, không có vách quay bắc/đông/tây hay tầng cao nhiều ô; thác nước là sprite vách có thác (không có dòng nước phía trên). Dòng chảy sông được lưu trong metadata (`terrain.meta.rivers`) nhưng chưa có hoạt ảnh. Hoa là một phần texture nền (không có sprite hoa rời).
+
 Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi trái/phải, chưa có mặt sau); nước chưa có animation; đồ họa đang vẽ bằng code (có thể thay bằng sprite sheet thật, giữ nguyên key/kích thước ở `src/render`).
 
 ## Cân bằng 100 đợt (đo bằng mô phỏng)

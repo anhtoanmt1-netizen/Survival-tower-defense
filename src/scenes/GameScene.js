@@ -3,10 +3,11 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { TOWER_TYPES, BRANCHES } from '../config/towers.js';
 import { SKILLS, SPEED_UPGRADE, speedUpgradeCost } from '../config/skills.js';
 import { WAVE_SETTINGS } from '../config/waves.js';
-import { generateMap } from '../map/index.js';
+import { generateMap, parseMapId } from '../map/index.js';
 import { Grid } from '../map/grid.js';
 import { preloadWorldAssets, smoothWorldTextures, GroundRenderer, ObjectLayer, Ambient } from '../render/world.js';
 import { createFxTextures } from '../render/towerTextures.js';
+import { TerrainRenderer } from '../render/terrainView.js';
 import { getDifficulty } from '../config/difficulty.js';
 import { ECON } from '../config/economy.js';
 import { settings } from '../config/settings.js';
@@ -27,10 +28,10 @@ const KIND_COLOR = { arrow: 0xe8e4d8, ice: 0x8fd0ff, fire: 0xff8a2a };
 export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
   init(data) { this.opts = data; }
-  preload() { preloadWorldAssets(this); }
+  preload() { preloadWorldAssets(this, parseMapId(this.opts.mapId).edition >= 2028); }
   create() {
     const diff = (this.diff = getDifficulty(this.opts.difficulty)), map = (this.map = generateMap(this.opts.mapId)); this.grid = new Grid(map);
-    smoothWorldTextures(this); createFxTextures(this); this.ground = new GroundRenderer(this, map); this.objects = new ObjectLayer(this, map); this.ambient = new Ambient(this, this.objects);
+    smoothWorldTextures(this); createFxTextures(this); this.ground = map.cls ? new TerrainRenderer(this, map) : new GroundRenderer(this, map); this.objects = new ObjectLayer(this, map); this.ambient = new Ambient(this, this.objects);
     const rng = mulberry32((Date.now() ^ map.seed) >>> 0), s = map.playerStart;
     this.economy = new Economy({ ...ECON, startGold: diff.startGold, safetyIncome: diff.safetyIncome }); this.fx = new Effects(this); this.renderer = new MonsterRenderer(this, this.fx);
     this.world = new MonsterWorld(this.grid, {

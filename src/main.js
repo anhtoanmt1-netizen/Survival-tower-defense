@@ -5,6 +5,7 @@ import { FONT_FILES } from './config/ui.js';
 import { settings } from './config/settings.js';
 import { DIFFICULTY_LIST, getDifficulty } from './config/difficulty.js';
 import { newRandomMapId, parseMapId } from './map/index.js';
+import { TERRAIN_THEMES, TERRAIN_THEME_CODES } from './map/terrain/themes.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { audio } from './systems/Audio.js';
@@ -38,6 +39,10 @@ function paintDiff() {
 }
 function showBest() { const d = getDifficulty(settings.data.difficulty), b = settings.data.bestWaves[d.id] || (d.id === 'easy' ? settings.data.bestWave : 0); $('best').textContent = b ? `Kỷ lục ${d.name}: đợt ${b}` : ''; }
 
+// chọn chủ đề + kích thước bản đồ mới
+const mt = $('mtheme'); mt.innerHTML = '<option value="random">🎲 Ngẫu nhiên (tự chọn chủ đề)</option>' + TERRAIN_THEME_CODES.map((k) => `<option value="${k}">${TERRAIN_THEMES[k].vi} – ${TERRAIN_THEMES[k].name}</option>`).join('');
+const paintMap = () => { mt.value = settings.data.mapTheme; $('msize').value = String(settings.data.mapSize); const t = TERRAIN_THEMES[settings.data.mapTheme]; $('mthemedesc').textContent = t ? t.blurb : 'Mỗi ván tự chọn một trong 7 chủ đề với địa hình khác nhau.'; };
+mt.onchange = () => { settings.set({ mapTheme: mt.value }); paintMap(); }; $('msize').onchange = () => settings.set({ mapSize: +$('msize').value }); paintMap();
 $('name').value = settings.data.name || 'Nông dân'; $('name').maxLength = GAME_CONFIG.player.maxNameLength; $('mapid').value = settings.data.lastMapId || ''; paintSwatches(); paintDiff();
 function copy(text) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
@@ -46,10 +51,10 @@ function copy(text) {
 async function loadFonts() { try { await Promise.all(FONT_FILES.map((w) => document.fonts.load(`${w} 14px Montserrat`, 'ĐợtẢạ Tiếng Việt ăâêôơư 0123456789'))); } catch { /* dùng font dự phòng */ } }
 async function start() {
   const raw = $('mapid').value.trim(); let id = raw;
-  if (!raw) id = newRandomMapId(); else { const p = parseMapId(raw); if (!p.ok) { $('err').textContent = p.error; return; } id = p.id; }
+  if (!raw) id = newRandomMapId(settings.data.mapTheme, settings.data.mapSize); else { const p = parseMapId(raw); if (!p.ok) { $('err').textContent = p.error; return; } id = p.id; }
   $('err').textContent = '';
   const name = ($('name').value.trim() || 'Nông dân').slice(0, GAME_CONFIG.player.maxNameLength); settings.set({ name, lastMapId: id });
-  currentMapId = id; $('menu').hidden = true; panel.setRun(id); $('endmodal').hidden = true; $('pauseov').hidden = true;
+  currentMapId = id; $('menu').hidden = true; panel.setRun(id, runInfo(id)); $('endmodal').hidden = true; $('pauseov').hidden = true;
   const debug = new URLSearchParams(location.search).get('debug') === '1'; await loadFonts(); audio.unlock();
   game = new Phaser.Game({
     type: Phaser.AUTO, parent: 'game', backgroundColor: '#1b2a1b', pixelArt: true,
@@ -61,6 +66,7 @@ async function start() {
   game.scene.add('Game', GameScene, true, { mapId: id, name, shirt: settings.data.shirt, difficulty: settings.data.difficulty, debug, onEnd, openSettings: () => panel.open() });
   game.scene.add('UI', UIScene, false);
 }
+const runInfo = (id) => { const p = parseMapId(id), t = TERRAIN_THEMES[p.theme]; return `${t ? t.vi + ' – ' + t.name : p.theme} · ${p.size}×${p.size}`; };
 const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 function onEnd(st) {
   const d = getDifficulty(st.difficulty), prev = settings.data.bestWaves[d.id] || (d.id === 'easy' ? settings.data.bestWave : 0), best = Math.max(prev, st.wave); settings.set({ bestWaves: { [d.id]: best } });
@@ -74,4 +80,4 @@ $('resume').onclick = () => game?.scene.getScene('Game')?.togglePause();
 $('pauseset').onclick = () => panel.open(); $('menuset').onclick = () => panel.open();
 $('endmenu').onclick = () => backToMenu();
 $('endretry').onclick = () => { const id = currentMapId; game?.destroy(true); game = null; $('mapid').value = id; start(); };
-$('random').onclick = () => { $('mapid').value = newRandomMapId(); };
+$('random').onclick = () => { $('mapid').value = newRandomMapId(settings.data.mapTheme, settings.data.mapSize); };

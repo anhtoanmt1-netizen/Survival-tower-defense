@@ -8,8 +8,8 @@ import { findPath } from '../src/core/pathfinding.js';
 import { EDITIONS, CURRENT_EDITION } from '../src/map/generators/index.js';
 import { isBlocking } from '../src/map/tiles.js';
 
-test('edition 2027 là mặc định cho bản đồ mới, edition 2026 vẫn tái tạo được', () => {
-  assert.equal(CURRENT_EDITION, 2027); assert.ok(EDITIONS[2026]); assert.ok(newRandomMapId().startsWith('FOREST-2027-'));
+test('edition 2028 là mặc định cho bản đồ mới; 2026 và 2027 vẫn tái tạo được', () => {
+  assert.equal(CURRENT_EDITION, 2028); assert.ok(EDITIONS[2026] && EDITIONS[2027]); assert.ok(newRandomMapId().includes('-2028-'));
   assert.ok(generateMap('FOREST-2026-A8F72K').tiles.length === 10000);
 });
 test('2027: cùng Map ID => cùng bản đồ; ID khác => khác', () => {
