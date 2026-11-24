@@ -66,6 +66,20 @@ Sinh bản đồ từ sprite sheet địa hình mới, **không rải tile ngẫ
 
 Giới hạn đã biết (sprite sheet chỉ có vách quay mặt về phía nam, cao 1 ô): vách là các dải thềm 1 ô, không có vách quay bắc/đông/tây hay tầng cao nhiều ô; thác nước là sprite vách có thác (không có dòng nước phía trên). Dòng chảy sông được lưu trong metadata (`terrain.meta.rivers`) nhưng chưa có hoạt ảnh. Hoa là một phần texture nền (không có sprite hoa rời).
 
+### Nâng cấp v0.7 – giao diện, cảnh quan, tùy biến
+| Hạng mục | Chi tiết |
+|---|---|
+| Giao diện đồng bộ | Hệ thiết kế duy nhất trong `index.html` (token màu, panel có header + viền kép, nút đủ trạng thái: thường/hover/nhấn/chọn/vô hiệu/đang xử lý, tab có thanh trượt, công tắc, thanh trượt có giá trị). Bộ icon vector dùng chung DOM + Phaser: `src/ui/icons.js`. Chuyển động ≤ 280ms, tôn trọng `prefers-reduced-motion`. Cài đặt: ngăn kéo bên phải khi ngang, bảng trượt từ dưới khi dọc |
+| Cây 2×2 | Bản đồ edition 2028: mỗi cây chiếm đúng 2×2 ô (neo trên lưới chẵn → không tạo khe hẹp), va chạm 4 ô, ảnh 336px sắc nét (hiển thị 112px). Bản đồ cũ giữ cây 1 ô. Loài cây theo vùng; lá/cánh hoa rơi RIÊNG từng loài (`VISUAL.leaf`) |
+| Hòa nền | Bóng tiếp đất cho cây/đá/bụi/tháp (`fx_shadow`, depth giữa nền và vật thể), phần đế cây/tháp được làm mờ bằng mặt nạ elip (`tools/build_object_assets.py`), Y-sorting theo chân vật thể |
+| Xem trước bản đồ | Menu hiển thị bản đồ thật (cùng bộ ghép của game) + chip đặc điểm; cập nhật khi đổi chủ đề, kích thước hoặc gõ Map ID; "xem gì chơi nấy" |
+| Tự tạm dừng | `PauseState` theo LÝ DO (thủ công / cài đặt / bảng tháp / bảng kỹ năng). Tùy chọn bật/tắt, lưu lại. Đóng bảng không làm game chạy tiếp nếu còn lý do dừng khác |
+| Chỉnh màu bản đồ | Độ sáng / tương phản / bão hòa ở mức pixel (không CSS filter, không shader); chỉ áp cho nền + cây/đá/bụi/cỏ; xem trực tiếp (giữ thanh kéo → bảng mờ đi); nút khôi phục mặc định |
+| Hiệu ứng nước | Tia phản chiếu + gợn sóng bằng sprite có giới hạn (`VISUAL.water`), bật/tắt được; tắt vẫn giữ nền nước tĩnh |
+| Cỏ | Cụm cỏ/hoa nhỏ theo vùng (tất định theo Map ID), gió lay nhẹ, nghiêng khi nhân vật bước qua; tắt = cỏ tĩnh |
+
+Mọi thông số (kích thước cây, bóng, nước, cỏ, khoảng chỉnh màu, lá rơi) nằm ở `src/config/visual.js`.
+
 Giới hạn đã biết: sprite chỉ có mặt trước (lật ngang khi đi trái/phải, chưa có mặt sau); nước chưa có animation; đồ họa đang vẽ bằng code (có thể thay bằng sprite sheet thật, giữ nguyên key/kích thước ở `src/render`).
 
 ## Cân bằng 100 đợt (đo bằng mô phỏng)

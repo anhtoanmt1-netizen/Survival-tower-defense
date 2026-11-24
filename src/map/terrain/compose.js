@@ -5,7 +5,8 @@ import { makeNoise } from '../../core/rng.js';
 import { C, F } from './classes.js';
 import { cliffSprite } from './autoterrain.js';
 import { BY_ID } from './registryIndex.js';
-const FILL = ['fill_grass', 'fill_flower', 'fill_dirt', 'fill_sand', 'fill_shallow', 'fill_deep', 'fill_pave'], NC = 7, STEP = 4;
+import { gradeBuffer } from '../../render/mapGrade.js';
+const FILL = ['fill_grass', 'fill_flower', 'fill_dirt', 'fill_sand', 'fill_shallow', 'fill_deep', 'fill_pave'], NC = 7;
 // co ảnh bằng lấy trung bình vùng (có tính alpha) để không răng cưa
 export function scaleImage(src, dw, dh) {
   const out = new Uint8ClampedArray(dw * dh * 4), sx = src.w / dw, sy = src.h / dh;
@@ -21,8 +22,9 @@ export function blit(dst, dw, dh, im, dx, dy, mul = 1) { // src-over lên nền 
 }
 export class Composer {
   // store.get(id) -> {w,h,data} (RGBA 8-bit); S = số pixel mỗi ô
-  constructor(store, map, S = 48) {
-    this.store = store; this.map = map; this.S = S; this.cache = new Map(); this.fills = FILL.map((id) => store.get(id)); this.k = 48 / S;
+  // opts.sprites=false: chỉ ghép nền (bản xem trước nhỏ ở menu không cần sprite vách/mảng đất)
+  constructor(store, map, S = 48, opts = {}) {
+    this.store = store; this.map = map; this.S = S; this.sprites = opts.sprites !== false; this.step = Math.max(1, Math.round(S / 12)); this.cache = new Map(); this.fills = FILL.map((id) => store.get(id)); this.k = 48 / S;
     const seed = map.seed || 1; this.nW1 = makeNoise((seed ^ 0x1234567) >>> 0); this.nW2 = makeNoise((seed ^ 0x7654321) >>> 0); this.nF = makeNoise((seed ^ 0x2468ace) >>> 0);
   }
   sprite(id, w, h, flip) { const key = `${id}|${w}|${h}|${flip ? 1 : 0}`; let s = this.cache.get(key); if (!s) { s = scaleImage(this.store.get(id), w, h); if (flip) s = flipH(s); this.cache.set(key, s); } return s; }
@@ -32,8 +34,8 @@ export class Composer {
     const ucx = ((a.usable[0] + a.usable[2]) / 2) * k, ub = a.usable[3] * k, ucxF = flip ? w - ucx : ucx;
     blit(buf, bw, bh, s, Math.round(cxPx - ucxF), Math.round(bottomPx - ub));
   }
-  compose(cx, cy, CH = 8) {
-    const { map, S } = this, W = map.width, H = map.height, size = CH * S, px0 = cx * size, py0 = cy * size, buf = new Uint8ClampedArray(size * size * 4), n = size / STEP + 3, A = 0.62 * S, cls = map.cls;
+  compose(cx, cy, CH = 8, grade = null) {
+    const { map, S } = this, STEP = this.step, W = map.width, H = map.height, size = CH * S, px0 = cx * size, py0 = cy * size, buf = new Uint8ClampedArray(size * size * 4), n = size / STEP + 3, A = 0.62 * S, cls = map.cls;
     const wgt = new Float32Array(n * n * NC), msk = new Uint8Array(n * n);
     for (let gy = 0; gy < n; gy++) for (let gx = 0; gx < n; gx++) { // lưới mẫu thưa: lớp của từng điểm sau khi méo toạ độ bằng nhiễu
       const wx = px0 + (gx - 1) * STEP, wy = py0 + (gy - 1) * STEP, f = 1 / (S * 0.95), g = 1 / (S * 0.33);
@@ -54,10 +56,11 @@ export class Composer {
       if (ww > 0.12 && ww < 0.88) { const band = 1 - Math.abs(ww - 0.5) / 0.38, br = this.nF((px0 + i) / (S * 0.22), (py0 + j) / (S * 0.22)); if (br > 0.3) { const a = band * band * 0.5 * Math.min(1, (br - 0.3) * 3); r += (240 - r) * a; g += (250 - g) * a; b += (252 - b) * a; } }
       const d = (j * size + i) * 4; buf[d] = r; buf[d + 1] = g; buf[d + 2] = b; buf[d + 3] = 255; } }
     // mảng đất/cát nhỏ (decor layer 7)
-    for (const dc of map.decor || []) { const x = dc.x * S, y = dc.y * S, ww = dc.s * 1.6; if (x + ww * S < px0 || x - ww * S > px0 + size || y + ww * S < py0 || y - ww * S > py0 + size) continue; this.place(buf, size, size, dc.id, false, x - px0, y - py0 + 0.5 * ww * S * 0.62, ww); }
+    if (this.sprites) for (const dc of map.decor || []) { const x = dc.x * S, y = dc.y * S, ww = dc.s * 1.6; if (x + ww * S < px0 || x - ww * S > px0 + size || y + ww * S < py0 || y - ww * S > py0 + size) continue; this.place(buf, size, size, dc.id, false, x - px0, y - py0 + 0.5 * ww * S * 0.62, ww); }
     // vách (layer 6): duyệt theo hàng để chồng lớp đúng thứ tự
-    for (let y = Math.max(0, cy * CH - 1); y <= Math.min(H - 1, cy * CH + CH); y++) for (let x = Math.max(0, cx * CH - 1); x <= Math.min(W - 1, cx * CH + CH); x++) if (map.feat[y * W + x] === F.CLIFF) {
+    if (this.sprites) for (let y = Math.max(0, cy * CH - 1); y <= Math.min(H - 1, cy * CH + CH); y++) for (let x = Math.max(0, cx * CH - 1); x <= Math.min(W - 1, cx * CH + CH); x++) if (map.feat[y * W + x] === F.CLIFF) {
       const s = cliffSprite(map, x, y); this.place(buf, size, size, s.id, s.flipX, (x + 0.5) * S - px0, (y + 1) * S + 0.2 * S - py0, 1.75); }
+    gradeBuffer(buf, grade); // chỉnh màu cảnh quan (độ sáng/tương phản/bão hòa), bỏ qua nếu mặc định
     return { w: size, h: size, data: buf };
   }
 }

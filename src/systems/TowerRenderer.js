@@ -4,6 +4,7 @@ import { BRANCHES } from '../config/towers.js';
 import { TOWER_DISPLAY } from '../config/art.js';
 import { FONT } from '../config/ui.js';
 import { FX } from '../config/fx.js';
+import { VISUAL } from '../config/visual.js';
 import Phaser from 'phaser';
 const TS = GAME_CONFIG.tileSize, NONE = 0xfff0c0, BASE = TOWER_DISPLAY.texScale;
 const hexOf = (h) => parseInt(h.slice(1), 16);
@@ -21,7 +22,8 @@ export class TowerRenderer {
   releaseArrow(p) { if (p.view) { p.view.setVisible(false); this.arrows.push(p.view); p.view = null; } if (p.glowView) { p.glowView.setVisible(false); this.glows.push(p.glowView); p.glowView = null; } }
   create(t) {
     const x = t.x * TS + 16, yb = t.y * TS + 34, d = t.y * TS + 30, S = this.scene;
-    const v = {
+    const [sw, sh, sa] = VISUAL.shadow.tower, v = {
+      shadow: S.add.image(x, t.y * TS + 30, 'fx_shadow').setDepth(0.6).setDisplaySize(sw, sh).setAlpha(sa), // bóng tiếp đất: tháp đứng vững trên nền
       pool: S.add.image(x, t.y * TS + 27, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(d - 1).setScale(1.5, 0.6).setAlpha(0),
       base: S.add.image(x, yb, 'tower_' + t.stage).setOrigin(0.5, 1).setScale(BASE).setDepth(d), scaf: S.add.image(x, yb, 'tower_scaffold').setOrigin(0.5, 1).setDepth(d + 1),
       crown: S.add.image(x, t.y * TS - 14, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(d + 2).setAlpha(0),
@@ -55,7 +57,7 @@ export class TowerRenderer {
       const txt = `LV${t.level}${t.pending > 0 ? ' ★' : ''}`; if (txt !== v.text) { v.text = txt; v.label.setText(txt); }
       v.label.setColor(top ? BRANCHES[top].color : '#ffffff').setVisible(!building);
     }
-    for (const [id, v] of this.views) if (!alive.has(id)) { for (const k of ['pool', 'base', 'scaf', 'crown', 'label']) v[k].destroy(); this.views.delete(id); }
+    for (const [id, v] of this.views) if (!alive.has(id)) { for (const k of ['shadow', 'pool', 'base', 'scaf', 'crown', 'label']) v[k].destroy(); this.views.delete(id); }
     for (const p of sys.projectiles) {
       const s = p.view || (p.view = this.acquireArrow(p)), x = p.x * TS, y = p.y * TS; s.setPosition(x, y).setRotation(Math.atan2(p.vy, p.vx)).setDepth(p.y * TS + 40);
       if (p.glowView) p.glowView.setPosition(x, y).setDepth(p.y * TS + 39);

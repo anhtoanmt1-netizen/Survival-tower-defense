@@ -122,9 +122,11 @@ const ok = (c, i, r = 0) => !c.prot[i] && !c.water[i] && !c.feat[i] && (c.cls[i]
 export function placeTrees(c) {
   const { W, H, N, theme, S } = c, order = shuffle(c, Array.from({ length: N }, (_, i) => i)), edge = (x, y) => Math.min(x, y, W - 1 - x, H - 1 - y);
   const belt = (x, y) => theme.treeBelt * S.width * (0.6 + 0.8 * c.nB(x * 0.07, y * 0.07)), coastNear = (i) => (c.landDist && c.landDist[i] <= 1);
-  for (const i of order) { const x = i % W, y = (i / W) | 0; if (!ok(c, i) || c.cls[i] === C.DIRT || c.cls[i] === C.SAND || coastNear(i) || (y > 0 && c.feat[i - W] === F.CLIFF)) continue; // không che chân vách
+  c.trees = []; // cây đặt trên LƯỚI CHẴN (khối 2x2 xếp khít, không để khe 1 ô); mỗi cây chiếm 2x2 ô (điểm neo = ô trên-trái); feat TREE đánh dấu cả 4 ô, vùng va chạm = 4 ô
+  const cell = (x, y) => { const i = y * W + x; return ok(c, i) && c.cls[i] !== C.DIRT && c.cls[i] !== C.SAND && !coastNear(i) && !(y > 0 && c.feat[i - W] === F.CLIFF); }; // không che chân vách
+  for (const i of order) { const x = i % W, y = (i / W) | 0; if ((x & 1) || (y & 1) || x + 1 >= W || y + 1 >= H || !cell(x, y) || !cell(x + 1, y) || !cell(x, y + 1) || !cell(x + 1, y + 1)) continue;
     const b = c.bio[i], forest = fbm(c.nC, x * 0.05 + 3, y * 0.05 + 3, 3), mask = (b === 1 ? 0.62 : b === 4 ? 0.28 : b === 2 ? 0.14 : 0.1) + 0.55 * (forest - 0.45), inBelt = edge(x, y) < belt(x, y);
-    if (inBelt ? c.rng() < 0.97 : c.rng() < Math.max(0, mask * theme.treeBase * 1.5 - 0.1) * (forest > 0.5 ? 1 : 0.5)) { c.feat[i] = F.TREE; c.fvar[i] = 0; } }
+    if (inBelt ? c.rng() < 0.97 : c.rng() < Math.max(0, mask * theme.treeBase * 1.5 - 0.1) * (forest > 0.5 ? 1 : 0.5)) { for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const j = (y + dy) * W + x + dx; c.feat[j] = F.TREE; c.fvar[j] = 0; } c.trees.push([x, y]); } }
 }
 const ROCK_BIG = 0, ROCK_MED = 1; // fvar: loại sprite đá (autoterrain chọn id cụ thể)
 export function placeRocks(c) {

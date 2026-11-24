@@ -32,6 +32,8 @@ export const DIFFICULTIES = {
     hpMul: 12, speedMul: 1.32, countMul: 2.8, tierShift: 26, bossHpMul: 1.6, rewardMul: 0.75, towerDamageMul: 0.9, towerRateMul: 0.95, buildCost: 95, startGold: 90, upgradeMul: 1.6,
     sellRefund: 0.5, resetCost: 90, firstWaveDelay: 10, waveInterval: 18, spawnPerSecond: 12, maxActive: 180, contactDamage: 2, skillCdMul: 1.5, speedCap: 2.4 }),
 };
+// icon vector (src/ui/icons.js) cho từng độ khó
+export const DIFF_ICON = { easy: 'grass', normal: 'sword', hard: 'flame', veryHard: 'skull', nightmare: 'bolt' };
 export const DIFFICULTY_LIST = Object.values(DIFFICULTIES);
 export const DEFAULT_DIFFICULTY = 'easy';
 export const getDifficulty = (id) => DIFFICULTIES[id] || DIFFICULTIES[DEFAULT_DIFFICULTY];

@@ -16,6 +16,5 @@ export function createFxTextures(scene) {
   make(scene, 'fx_glow', 64, 64, (c) => { c.imageSmoothingEnabled = true; const g = c.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); });
   make(scene, 'fx_spark', 16, 16, (c) => { c.imageSmoothingEnabled = true; c.fillStyle = '#fff'; c.beginPath(); c.moveTo(8, 0); c.lineTo(10, 6); c.lineTo(16, 8); c.lineTo(10, 10); c.lineTo(8, 16); c.lineTo(6, 10); c.lineTo(0, 8); c.lineTo(6, 6); c.closePath(); c.fill(); });
   make(scene, 'fx_leaf', 8, 6, (c) => { c.imageSmoothingEnabled = true; c.fillStyle = '#fff'; c.beginPath(); c.ellipse(4, 3, 3.6, 2.2, 0.5, 0, 6.2832); c.fill(); });
-  const foam = (key, w, h, x, y, fw, fh) => make(scene, key, w, h, (c) => rect(c, 'rgba(235,248,252,.32)', x, y, fw, fh));
-  foam('foam_n', 48, 5, 0, 0, 48, 3); foam('foam_s', 48, 5, 0, 2, 48, 3); foam('foam_w', 5, 48, 0, 0, 3, 48); foam('foam_e', 5, 48, 2, 0, 3, 48);
+  make(scene, 'fx_shadow', 64, 32, (c) => { c.imageSmoothingEnabled = true; c.save(); c.scale(1, 0.5); const g = c.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(20,28,16,.9)'); g.addColorStop(0.6, 'rgba(20,28,16,.45)'); g.addColorStop(1, 'rgba(20,28,16,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); c.restore(); });
 }

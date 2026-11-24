@@ -37,9 +37,11 @@ function networks(c) {
 function reconcile(c, tiles) { // đồng bộ lớp hiển thị với kết quả hậu xử lý lối đi (xóa/đào/lấp)
   for (let i = 0; i < c.N; i++) { const want = tOf(c.cls[i], c.feat[i]), got = tiles[i]; if (want === got) continue; const wasBlock = isBlocking(want);
     if (wasBlock && !isBlocking(got)) { if (isWaterC(c.cls[i])) c.cls[i] = C.PAVE; else if (got === T.DIRT) c.cls[i] = C.DIRT; c.feat[i] = F.NONE; }
-    else if (!wasBlock && isBlocking(got)) { if (got === T.TREE) c.feat[i] = F.TREE; else if (got === T.ROCK) c.feat[i] = F.ROCK; if (c.cls[i] === C.PAVE || c.cls[i] === C.SAND) c.cls[i] = C.GRASS; }
-    else if (got === T.GRASS && want !== T.GRASS) { c.feat[i] = F.NONE; } else if (got === T.DIRT && want === T.BUSH) c.feat[i] = F.NONE; }
+    else if (!wasBlock && isBlocking(got)) { c.feat[i] = F.ROCK; if (c.cls[i] === C.PAVE || c.cls[i] === C.SAND) c.cls[i] = C.GRASS; } // ô lấp chỗ trũng: đá nhỏ (cây là khối 2x2 nên không lấp từng ô)
+    else if (got === T.GRASS && want !== T.GRASS) c.feat[i] = F.NONE; else if (got === T.DIRT && want === T.BUSH) c.feat[i] = F.NONE; }
   for (let i = 0; i < c.N; i++) if (c.feat[i] === F.BUSH && (c.cls[i] === C.DIRT || c.cls[i] === C.SAND)) c.feat[i] = F.NONE;
+  // cây bị hậu xử lý dọn mất một phần ô -> bỏ nguyên cây (không để lại nửa cây)
+  c.trees = c.trees.filter(([x, y]) => { const ids = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => (y + dy) * c.W + x + dx); if (ids.every((j) => c.feat[j] === F.TREE)) return true; for (const j of ids) if (c.feat[j] === F.TREE) c.feat[j] = F.NONE; return false; });
 }
 function build(code, seed, size) {
   const theme = TERRAIN_THEMES[code], c = makeCtx(seed, size, theme);
@@ -52,7 +54,7 @@ export function generateTerrainMap(code, { seed, size }) {
   let last = null;
   for (let attempt = 0; attempt < 8; attempt++) {
     const { c, tiles } = build(code, (seed + Math.imul(attempt, 0x9e3779b1)) >>> 0, size);
-    const map = { tiles, width: c.W, height: c.H, gates: c.gates, playerStart: c.start, cls: c.cls, feat: c.feat, fvar: c.fvar, decor: c.decor,
+    const map = { tiles, width: c.W, height: c.H, gates: c.gates, playerStart: c.start, cls: c.cls, feat: c.feat, fvar: c.fvar, decor: c.decor, trees: c.trees,
       terrain: { themeCode: code, wd: c.wd, landDist: c.landDist, meta: { ...c.meta, attempt, regions: c.meta.regions } } };
     const v = validateMap(map), q = validateTerrain(map); last = { map, v, q };
     if (globalThis.__terrDebug && !(v.ok && q.ok)) globalThis.__terrDebug.push(code + ': ' + [...v.errors, ...q.errors].join(' | '));
