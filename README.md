@@ -137,3 +137,9 @@ Thêm chủ đề mới: tạo `config/themes/<ten>.js`, đăng ký trong `theme
 - **Build UI**: thẻ icon Tháp / Tường, hoạt ảnh mở/đóng.
 - **Minimap** dùng cùng bộ ghép địa hình với bản xem trước (cổng, tường, tháp cùng phong cách).
 - **Tài nguyên** dựng lại bằng `tools/build_new_assets.py` (nhân vật 12 khung, tháp + đuốc, tường) và `tools/build_object_assets.py` (cây 504px) ở độ phân giải cao hơn để không bị mờ.
+
+## Nâng cấp v0.9
+- **Cây** (`Tree.png`): 9 cây tách ở **nguyên độ phân giải gốc** (`tools/build_tree_assets.py`), không còn làm mờ chân/đế và không chỉnh màu → thân và rễ liền một khối. Chiếm 2x2 ô, vẫn lay theo gió và rụng lá/cánh hoa theo từng loài (`VISUAL.leaf`); cây hẹp (thông) co cùng tỉ lệ với các cây khác (`VISUAL.tree.refW`).
+- **Tháp và Tường chiếm 2x2 ô** (`ECON.footprint`): (x,y) = ô trên-trái; chặn/giải phóng cả 4 ô, kiểm tra địa hình/ranh giới/nhân vật/đường đi cho cả khối, bắn từ tâm khối. Giá giữ nguyên: tháp 60, tường 5 vàng / công trình. `PROTOCOL_VERSION = 3`.
+- **Menu**: sửa lỗi cắt mất phần trên của Preview Map (căn giữa bằng `align-items:center` làm phần đầu không cuộn tới được) → căn giữa an toàn bằng `margin:auto`, áp dụng cho menu chính và các hộp thoại.
+- **Nút Camera** cạnh minimap (cùng kích thước/kiểu nút Cài đặt): chạm để đổi tầm nhìn Gần → Xa → Rộng, dùng chung giá trị với mục "Tầm nhìn camera" trong Cài đặt.

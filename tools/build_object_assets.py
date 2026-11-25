@@ -34,3 +34,4 @@ def main(tree, tower):
             c = feather_base(c, cyp=int(14 / F), rx=int(0.5 * c.shape[1]), ryu=int(24 / F), ryl=int(16 / F), y0p=int(34 / F), soft=0.4); im = Image.fromarray(c).resize((round(c.shape[1] * F), round(c.shape[0] * F)), Image.LANCZOS)
             im.save(f'public/assets/towers/tower_{k}.png'); print('tower', k, im.size); k += 1
 if __name__ == '__main__': main(sys.argv[1], sys.argv[2])
+# GHI CHÚ: phần dựng CÂY ở trên đã được thay bằng tools/build_tree_assets.py (nguyên độ phân giải, không làm mờ chân). Đừng chạy file này để dựng cây nữa.

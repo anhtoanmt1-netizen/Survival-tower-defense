@@ -38,7 +38,7 @@ test('tường: bán hoàn tiền, ô giải phóng, bản đồ đổi version 
 });
 test('tường: chặn quái thật sự (FlowField coi là vật cản) nhưng KHÔNG cho phép bịt kín hoàn toàn đường tới người chơi', () => {
   const c = setup(); c.economy.gold = 100000; const ps = c.m.playerStart; let blocked = 0, built = 0;
-  for (let r = 1; r <= 2; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ps.x + dx, y = ps.y + dy; if (!c.grid.isWalkable(x, y)) continue; const res = c.ts.buildWall(x, y, [c.p]); if (res.ok) built++; else if (res.reason === 'blocked') blocked++; }
+  for (let r = 1; r <= 5; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ps.x + dx, y = ps.y + dy; if (!c.grid.isWalkable(x, y)) continue; const res = c.ts.buildWall(x, y, [c.p]); if (res.ok) built++; else if (res.reason === 'blocked') blocked++; }
   assert.ok(built > 0 && blocked > 0, `đã xây ${built}, bị từ chối vì chặn kín ${blocked}`);
   const ff = new FlowField(c.grid.width, c.grid.height); ff.compute(c.grid, [c.grid.targetTile(c.p)]); for (const w of c.ts.walls) assert.equal(ff.dist[w.y * c.grid.width + w.x], Infinity);
   const gate = c.m.gates[0]; let reach = false; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (c.grid.isWalkable(gate.x + dx, gate.y + dy) && ff.dist[(gate.y + dy) * c.grid.width + gate.x + dx] < Infinity) reach = true; assert.ok(reach, 'cổng vẫn có đường tới người chơi');

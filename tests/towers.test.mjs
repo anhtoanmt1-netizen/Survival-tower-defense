@@ -53,7 +53,7 @@ test('điều kiện xây: cây/đá/sông/bụi, ngoài bản đồ, ô có th�
   assert.equal(c.ts.checkPlacement(m.playerStart.x, m.playerStart.y, [c.p]).reason, 'player');
   const a = freeCell(c); assert.ok(c.ts.build(a.x, a.y, [c.p]).ok); c.economy.add(500);
   const again = c.ts.build(a.x, a.y, [c.p]); assert.equal(again.reason, 'occupied'); assert.equal(c.ts.towers.length, 1); assert.equal(c.economy.gold, 60 + 500);
-  assert.equal(grid.extra.reduce((s, v) => s + v, 0), 1);
+  assert.equal(grid.extra.reduce((s, v) => s + v, 0), 4); // tháp chiếm khối 2x2 = 4 ô
 });
 test('xây bị từ chối nếu chặn hết đường: đúng thông báo, không trừ vàng, không đổi bản đồ', () => {
   const c = setup(3), { m, grid } = c, s = m.playerStart; c.economy.add(1000);
