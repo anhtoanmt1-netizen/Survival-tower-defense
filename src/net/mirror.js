@@ -1,3 +1,4 @@
+import { ECON } from '../config/economy.js';
 import { Grid } from '../map/grid.js';
 import { TowerSystem } from '../sim/towers.js';
 import { SLIMES } from '../config/slimes.js';
@@ -21,12 +22,12 @@ export class Mirror {
   // --- tháp ---
   applyTower(info) {
     let t = this.ts.towers.find((x) => x.id === info.id);
-    if (!t) { t = { id: info.id, x: info.x, y: info.y, type: info.type, cd: 0, angle: 0, kills: 0 }; this.ts.towers.push(t); this.grid.setBlocked(t.x, t.y, true); }
+    if (!t) { t = { id: info.id, x: info.x, y: info.y, type: info.type, cd: 0, angle: 0, kills: 0 }; this.ts.towers.push(t); this.grid.setBlockedRect(t.x, t.y, ECON.footprint.tower, true); }
     Object.assign(t, { level: info.level, picks: info.picks.slice(), state: info.state, buildT: info.buildT, invested: info.invested }); this.ts.refresh(t); return t;
   }
-  applyWall(info) { if (this.ts.walls.some((w) => w.id === info.id)) return; this.ts.walls.push({ id: info.id, x: info.x, y: info.y }); this.grid.setBlocked(info.x, info.y, true); this.hooks.onWallAdded?.(info); }
-  removeWall(id) { const i = this.ts.walls.findIndex((w) => w.id === id); if (i < 0) return; const w = this.ts.walls[i]; this.ts.walls.splice(i, 1); this.grid.setBlocked(w.x, w.y, false); this.hooks.onWallRemoved?.(w); }
-  removeTower(id) { const i = this.ts.towers.findIndex((x) => x.id === id); if (i < 0) return; const t = this.ts.towers[i]; this.ts.towers.splice(i, 1); this.grid.setBlocked(t.x, t.y, false); this.hooks.onTowerRemoved?.(t); }
+  applyWall(info) { if (this.ts.walls.some((w) => w.id === info.id)) return; this.ts.walls.push({ id: info.id, x: info.x, y: info.y }); this.grid.setBlockedRect(info.x, info.y, ECON.footprint.wall, true); this.hooks.onWallAdded?.(info); }
+  removeWall(id) { const i = this.ts.walls.findIndex((w) => w.id === id); if (i < 0) return; const w = this.ts.walls[i]; this.ts.walls.splice(i, 1); this.grid.setBlockedRect(w.x, w.y, ECON.footprint.wall, false); this.hooks.onWallRemoved?.(w); }
+  removeTower(id) { const i = this.ts.towers.findIndex((x) => x.id === id); if (i < 0) return; const t = this.ts.towers[i]; this.ts.towers.splice(i, 1); this.grid.setBlockedRect(t.x, t.y, ECON.footprint.tower, false); this.hooks.onTowerRemoved?.(t); }
   applyStart(msg) { // cũng dùng khi vào lại phòng: đối chiếu để bỏ tháp đã bị bán trong lúc mất kết nối
     const ids = new Set(msg.towers.map((t) => t.id)); for (const t of this.ts.towers.slice()) if (!ids.has(t.id)) this.removeTower(t.id);
     const wids = new Set((msg.walls || []).map((w) => w.id)); for (const w of this.ts.walls.slice()) if (!wids.has(w.id)) this.removeWall(w.id);

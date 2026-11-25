@@ -6,9 +6,9 @@ export const TREE_ZONES = [
   { name: 'oak', species: [4, 4, 4, 5, 1] }, { name: 'pine', species: [8, 8, 8, 4, 7] }, { name: 'orchard', species: [5, 5, 4, 2, 3] },
   { name: 'blossom', species: [2, 2, 3, 4, 1] }, { name: 'autumn', species: [0, 0, 0, 4, 7] }, { name: 'bamboo', species: [6, 6, 6, 4, 1] },
 ];
-// Tháp: chiều rộng hiển thị (px thế giới) theo từng hình tiến hóa. 1 ô = 32px => tháp ~33px: hai tháp liền kề KHÔNG chồng lên nhau (hình LV15 có thêm vòng sáng nên rộng hơn một chút).
-export const TOWER_DISPLAY = { widths: [33, 33, 33, 34, 34, 36], shadowY: 4 };
-export const WALL_DISPLAY = { width: 35 };   // tường 1 ô: rộng ~1 ô, các ô tường kề nhau nối liền (xếp theo Y)
+// Tháp: chiều rộng hiển thị (px thế giới) theo từng hình tiến hóa. tháp chiếm 2x2 ô = 64px => rộng ~64px: hai tháp liền kề KHÔNG chồng lên nhau (hình LV15 có thêm vòng sáng nên rộng hơn một chút).
+export const TOWER_DISPLAY = { widths: [64, 64, 64, 66, 66, 70], shadowY: 4 };   // tháp chiếm 2x2 ô (64px): rộng ≈ 2 ô, hai tháp kề nhau không đè nhau
+export const WALL_DISPLAY = { width: 68 };   // tường chiếm 2x2 ô: rộng ~2 ô, các khối tường kề nhau nối liền (xếp theo Y)
 export const PLAYER_DISPLAY = { scale: 0.36, originY: 128 / 136, cell: [96, 136] }; // main_sheet.png: 3 cột x 4 hàng (xuống/trái/phải/lên), chân ở y=128
 // Vị trí ĐUỐC trên từng hình tháp (Tower.png) – [x, y, cỡ] với x,y là tỉ lệ 0..1 trên ảnh, y = gốc ngọn lửa. Hình LV1-LV7(0,1) không có đuốc. Hình 5 là lửa xanh.
 export const TOWER_FLAMES = {

@@ -1,3 +1,4 @@
+import { settings, VIEW_PRESETS, viewPresetOf } from '../config/settings.js';
 import Phaser from 'phaser';
 import { Joystick } from '../input/Joystick.js';
 import { ActionButton } from '../ui/ActionButton.js';
@@ -43,6 +44,8 @@ export class UIScene extends Phaser.Scene {
     this.hearts = []; this.icoCoin = I('coin', 0xffd24a); this.txGold = S(this.add.text(0, 0, '', T14).setDepth(1000)); this.icoFlag = I('flag', 0x9ad8ff); this.txWave = S(this.add.text(0, 0, '', T14).setDepth(1000)); this.icoSlime = I('slime', 0x8be07a); this.txSlime = S(this.add.text(0, 0, '', T14).setDepth(1000)); this.txNext = S(this.add.text(0, 0, '', T11).setDepth(1000)); this.txInfo = S(this.add.text(0, 0, '', T11).setDepth(1000));
     this.pillBg = S(this.add.graphics().setDepth(1050)); this.pillIco = I('pause', 0xffffff).setDepth(1051); this.pillTx = S(this.add.text(0, 0, 'Tạm dừng khi nâng cấp', { ...TXT, fontSize: '11px', fontStyle: '700', strokeThickness: 3 }).setDepth(1051)); this.pillShown = false;
     this.setBtn = new ActionButton(this, { color: 0x3a5a48, iconKey: 'ui_icon_gear', onTap: () => { audio.play('open'); game.opts.openSettings?.(); } });
+    // Nút TẦM NHÌN CAMERA (cạnh minimap, cùng kích thước/kiểu với nút Cài đặt): chạm để đổi vòng Gần -> Xa -> Rộng; cùng giá trị với mục "Tầm nhìn camera" trong Cài đặt
+    this.camBtn = new ActionButton(this, { color: 0x3a5a48, iconKey: 'ui_icon_camera', onTap: () => this.cycleView() });
     this.banner = S(this.add.text(0, 0, '', { ...TXT, fontSize: '26px', fontStyle: '800', strokeThickness: 6, align: 'center' }).setOrigin(0.5).setDepth(1100).setAlpha(0));
     this.warn = S(this.add.text(0, 0, '', { ...TXT, fontSize: '18px', color: '#ffd24a', align: 'center' }).setOrigin(0.5, 0).setDepth(1100).setVisible(false));
     this.lastWave = 0; this.fpsT = 0; this.fpsText = ''; this.lastWarn = -1;
@@ -107,6 +110,11 @@ export class UIScene extends Phaser.Scene {
     const s = this.mmSize, { map } = this.d, lx = (p.x - (this.mmX - s)) / s, ly = (p.y - this.mmY) / s;
     this.d.game.peekAt(Math.floor(lx * map.width), Math.floor(ly * map.height)); // chạm minimap = xem khu vực đó trên bản đồ lớn
   }
+  cycleView() {
+    const names = Object.keys(VIEW_PRESETS), cur = viewPresetOf(settings.data.display.view), i = cur ? names.indexOf(cur) : names.reduce((b, n, k) => (Math.abs(VIEW_PRESETS[n] - settings.data.display.view) < Math.abs(VIEW_PRESETS[names[b]] - settings.data.display.view) ? k : b), 0), next = names[(i + 1) % names.length];
+    audio.play('click'); settings.set({ display: { view: VIEW_PRESETS[next] } }); // GameScene.fitZoom lắng nghe thay đổi 'display'
+    this.d.game.panels?.toast(`Tầm nhìn: ${{ near: 'Gần', far: 'Xa', wide: 'Rộng' }[next] || next}`, 'ok');
+  }
   layout() {
     const { width, height } = this.scale, ins = safeInsets(), u = (this.u = Phaser.Math.Clamp(Math.min(width, height) / 420, 0.78, 1.25)), land = width > height;
     this.mmSize = this.expanded ? Math.min(300, Math.floor(Math.min(width, height) * 0.72)) : Math.round((land ? 96 : 112) * u);
@@ -115,7 +123,7 @@ export class UIScene extends Phaser.Scene {
     this.mm.setPosition(this.mmX, this.mmY).setDisplaySize(Z, Z);
     this.mmBack.setPosition(this.mmX, this.mmY + Z + 8); this.mmShrink.setPosition(this.mmX - this.mmBack.width - 8, this.mmY + Z + 8);
     this.hx = ins.left + 12; this.hy = ins.top + 10; this.banner.setPosition(width / 2, height * 0.3); this.warn.setPosition(width / 2, ins.top + 12);
-    const rs = 17 * u; this.setBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs + 2, rs, -1, 0); // nút cài đặt nằm ngay cạnh minimap
+    const rs = 17 * u; this.setBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs + 2, rs, -1, 0); ; this.camBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs * 3 + 10, rs, -1, 0); // nút cài đặt + nút camera xếp dọc ngay cạnh minimap
     this.joystick.layout(u);
     const rb = 36 * u, bx = width - ins.right - 24 - rb, by = height - ins.bottom - 24 - rb;
     this.btn.layout(bx, by, rb, -5 * u, 0); this.btnT.setPosition(bx, by + 17 * u);
@@ -124,7 +132,7 @@ export class UIScene extends Phaser.Scene {
   }
   isUiPointer(p) {
     const inR = (x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h, near = (b) => Math.hypot(p.x - b.hit.x, p.y - b.hit.y) <= b.hit.r + 8, S = this.mmSize;
-    return this.joystick.ownsPointer(p) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || near(this.setBtn) || Object.values(this.sk).some(near)
+    return this.joystick.ownsPointer(p) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || near(this.setBtn) || near(this.camBtn) || Object.values(this.sk).some(near)
       || (this.buildOpen && inR(this.menuX - this.MW / 2, this.menuY - this.MH / 2, this.MW, this.MH)) || [this.mmBack, this.mmShrink].some((b) => b.visible && b.getBounds().contains(p.x, p.y));
   }
   update(_, ms) {
@@ -132,8 +140,8 @@ export class UIScene extends Phaser.Scene {
     const dir = game.director, world = game.world, k = player.skills, diff = game.diff;
     // minimap động
     const g = this.mmG; g.clear();
-    g.fillStyle(0x4aa3f0, 1); for (const t of game.ts.towers) g.fillRect(x0 + t.x * sx - 1, y0 + t.y * sy - 1, Math.max(3, sx * 1.6), Math.max(3, sy * 1.6));
-    g.fillStyle(0xc9b88a, 1); for (const w of game.ts.walls) g.fillRect(x0 + w.x * sx, y0 + w.y * sy, Math.max(2, sx), Math.max(2, sy));
+    g.fillStyle(0x4aa3f0, 1); for (const t of game.ts.towers) g.fillRect(x0 + t.x * sx, y0 + t.y * sy, Math.max(3, sx * 2), Math.max(3, sy * 2));
+    g.fillStyle(0xc9b88a, 1); for (const w of game.ts.walls) g.fillRect(x0 + w.x * sx, y0 + w.y * sy, Math.max(3, sx * 2), Math.max(3, sy * 2));
     for (const gt of game.activeGates) { const gx = x0 + (gt.x + 0.5) * sx, gy = y0 + (gt.y + 0.5) * sy; g.fillStyle(0xb06cff, 1).fillCircle(gx, gy, 3.4).lineStyle(1.5, 0xffffff, 1).strokeCircle(gx, gy, 4.6); }
     g.fillStyle(0xff3b30, 1); for (const m of world.monsters) if (!m.dying) g.fillRect(x0 + m.x * sx - 1, y0 + m.y * sy - 1, Math.max(2, sx), Math.max(2, sy));
     const vw = cam.width / cam.zoom / ts, vh = cam.height / cam.zoom / ts;
@@ -165,7 +173,7 @@ export class UIScene extends Phaser.Scene {
     this.txNext.setPosition(hx + 2, hy + 51).setText(next); this.txInfo.setPosition(hx + 2, hy + 65).setText(`${diff.name} · ${this.fpsText}`);
     // nhãn gợi ý khi game đang tự tạm dừng vì bảng nâng cấp
     const showPill = game.pause.onlyAuto && game.state === 'playing'; if (showPill !== this.pillShown) { this.pillShown = showPill; this.pillBg.clear(); this.pillIco.setVisible(showPill); this.pillTx.setVisible(showPill); if (showPill) { const { width } = this.scale, w = this.pillTx.width + 38, x = width / 2 - w / 2, y = this.hy + 28; this.pillBg.fillStyle(0x14221b, 0.9).fillRoundedRect(x, y, w, 24, 12).lineStyle(1.5, 0xe0b13a, 0.9).strokeRoundedRect(x, y, w, 24, 12); this.pillIco.setPosition(x + 14, y + 12).setDisplaySize(14, 14); this.pillTx.setPosition(x + 26, y + 5); } }
-    this.setBtn.setState({ alpha: 1 });
+    this.setBtn.setState({ alpha: 1 }); this.camBtn.setState({ alpha: 1 });
     if (dir.wave < total && cdn <= 5 && cdn > 0) { this.warn.setText(`⚠ ĐỢT ${nextWave} SẮP TỚI: ${cdn}s`).setVisible(true).setScale(1 + 0.06 * Math.sin(this.time.now / 90)); if (cdn !== this.lastWarn) { this.lastWarn = cdn; audio.play('warn'); } } else { this.warn.setVisible(false); this.lastWarn = -1; }
     if (dir.wave !== this.lastWave) { this.lastWave = dir.wave; const s = dir.currentSpec; this.banner.setText(`ĐỢT ${dir.wave}${s.boss ? ' – THỬ THÁCH' : ''}\n${s.count} slime`).setAlpha(1); this.tweens.add({ targets: this.banner, alpha: 0, delay: 1500, duration: 600 }); audio.play(s.boss ? 'wave_boss' : 'wave_start'); }
     if (player.dead) this.banner.setText('BẠN ĐÃ BỊ HẠ').setAlpha(1);

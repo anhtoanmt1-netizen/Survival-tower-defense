@@ -32,7 +32,7 @@ export class NetGameScene extends GameScene {
     this.selected = null; this.placing = null; this.paused = false; this.userPaused = false; this.state = 'playing'; this.refT = 0; this.peeking = false; this.wantSkill = null; this.sendT = 0; this.lastSent = null;
     this.panels = new Panels({
       ts: this.ts, economy: this.economy, close: () => this.select(null), onModal: () => {}, // nhiều người: không tạm dừng
-      upgrade: (t) => this.cmd('upgrade', { tid: t.id }, (r) => { if (r.ok) { this.fx.ring(t.x * TS + 16, t.y * TS + 16, 0xffd24a, 6, 34, 0.4); this.wantSkill = t.id; } }),
+      upgrade: (t) => this.cmd('upgrade', { tid: t.id }, (r) => { if (r.ok) { this.fx.ring(t.x * TS + TS, t.y * TS + TS, 0xffd24a, 6, 34, 0.4); this.wantSkill = t.id; } }),
       pick: (t, b) => this.cmd('pick', { tid: t.id, branch: b }, (r) => { if (r.ok) this.panels.hideSkill(); }),
       reset: (t) => this.cmd('reset', { tid: t.id }), sell: (t) => this.cmd('sell', { tid: t.id }, (r) => { if (r.ok) this.select(null); }),
     });
@@ -63,7 +63,7 @@ export class NetGameScene extends GameScene {
     this.cmd(pl.kind === 'wall' ? 'wall' : 'build', { x: pl.tile.x, y: pl.tile.y });
   }
   tapWall(w) {
-    if (this.wallArm === w.id) { const x = w.x * TS + 16, y = w.y * TS - 6; this.disarmWall(); this.cmd('sellwall', { wid: w.id }, (r) => { if (r.ok) this.fx.float(x, y, '+' + this.ts.wallRefund(), '#ffd24a'); }); return; }
+    if (this.wallArm === w.id) { const x = w.x * TS + TS, y = w.y * TS - 6; this.disarmWall(); this.cmd('sellwall', { wid: w.id }, (r) => { if (r.ok) this.fx.float(x, y, '+' + this.ts.wallRefund(), '#ffd24a'); }); return; }
     this.wallArm = w.id; this.wallView.arm(w); this.panels.toast(`Chạm tường lần nữa để phá (hoàn ${this.ts.wallRefund()} vàng).`); this.wallTimer?.remove(); this.wallTimer = this.time.delayedCall(2500, () => this.disarmWall());
   }
   useSkill(name) {
@@ -85,7 +85,7 @@ export class NetGameScene extends GameScene {
     const [k] = ev, fx = this.fx;
     if (k === 'k') { fx.float(ev[2] * TS, ev[3] * TS - 18, '+' + ev[4]); fx.puff(ev[2] * TS, ev[3] * TS - 8, 0xffffff, 8, 50, 0.4); }
     else if (k === 'h') { const m = this.mir.byId.get(ev[1]); if (m) { const x = m.x * TS, y = m.y * TS - 8, kind = ['arrow', 'ice', 'fire'][ev[2]]; fx.puff(x, y, KIND_COLOR[kind], ev[3] ? 10 : 4, 40, 0.3); if (ev[3]) { fx.ring(x, y, 0xffd24a, 4, 22, 0.3); fx.float(x, y - 10, '!', '#ffd24a'); } if (ev[4] > 0) fx.ring(x, y + 8, 0x8fd0ff, 6, ev[4] * TS, 0.4); } }
-    else if (k === 'tb') { const t = this.ts.towers.find((x) => x.id === ev[1]); if (t) { fx.ring(t.x * TS + 16, t.y * TS + 16, 0xffffff, 8, 44, 0.5); fx.puff(t.x * TS + 16, t.y * TS + 16, 0xffe08a, 10, 60, 0.5); } this.panels.refresh(); }
+    else if (k === 'tb') { const t = this.ts.towers.find((x) => x.id === ev[1]); if (t) { fx.ring(t.x * TS + TS, t.y * TS + TS, 0xffffff, 8, 44, 0.5); fx.puff(t.x * TS + TS, t.y * TS + TS, 0xffe08a, 10, 60, 0.5); } this.panels.refresh(); }
     else if (k === 'tw') { this.panels.refresh(); if (ev[1] === 'upd' && this.wantSkill === ev[2].id) { const t = this.ts.towers.find((x) => x.id === ev[2].id); this.wantSkill = null; if (t && t.pending > 0) this.panels.showSkill(t); } }
     else if (k === 'sk') { const p = ev[1] === this.mir.you ? this.player : this.mir.players.get(ev[1]); if (p) { const c = ev[2] === 'invincible' ? 0xffe066 : 0x9ad0ff; fx.ring(p.x * TS, p.y * TS - 16, c, 8, 48, 0.5); fx.puff(p.x * TS, p.y * TS - 16, c, 12, 70, 0.5); } if (ev[1] === this.mir.you) this.panels.toast(`${SKILLS[ev[2]].icon} ${SKILLS[ev[2]].name}: ${SKILLS[ev[2]].duration}s`, 'ok'); }
     else if (k === 'pe') { fx.ring(ev[2] * TS, ev[3] * TS - 10, 0x9ad0ff, 6, 40, 0.4); if (ev[1] === this.mir.you) this.panels.toast('Hết xuyên vật thể: đưa về ô hợp lệ gần nhất.', 'ok'); }

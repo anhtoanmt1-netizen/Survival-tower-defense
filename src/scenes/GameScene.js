@@ -58,9 +58,9 @@ export class GameScene extends Phaser.Scene {
     }
     this.ts = new TowerSystem({ grid: this.grid, world: this.world, economy: this.economy, gates: this.activeGates, rng, diff, hooks: {
       onBuildStart: () => { this.player.startBuild(); audio.play('build_start'); },
-      onBuilt: (t) => { this.fx.ring(t.x * TS + 16, t.y * TS + 16, 0xffffff, 8, 44, 0.5); this.fx.puff(t.x * TS + 16, t.y * TS + 16, 0xffe08a, 10, 60, 0.5); this.fx.glow(t.x * TS + 16, t.y * TS, 0xffe9a0, 90, 0.5); audio.play('build_done'); this.panels.refresh(); },
-      onEvolve: (t) => { this.towerView.evolve(t); const x = t.x * TS + 16, y = t.y * TS; this.fx.ring(x, y + 10, 0xffffff, 10, 70, 0.7); this.fx.ring(x, y + 10, 0xffd24a, 6, 50, 0.9); this.fx.glow(x, y, 0xffe9a0, 130, 0.8); this.fx.spark(x, y, 0xffe9a0, 14, 90, 0.9, 1.2); this.cameras.main.flash(180, 255, 245, 200, true); audio.play('evolve'); this.panels.toast(`Tháp tiến hóa! (LV${t.level})`, 'ok'); },
-      onShoot: (t) => { const c = t.stats.kind, F = FX.kinds[c]; audio.play('shoot_' + c); if (this.fx.flashes < FX.flashMax) { this.fx.flashes++; this.fx.glow(t.x * TS + 16, t.y * TS - 12, F.glow, 34, 0.14, 0.7); } },
+      onBuilt: (t) => { this.fx.ring(t.x * TS + TS, t.y * TS + TS, 0xffffff, 8, 44, 0.5); this.fx.puff(t.x * TS + TS, t.y * TS + TS, 0xffe08a, 10, 60, 0.5); this.fx.glow(t.x * TS + TS, t.y * TS, 0xffe9a0, 90, 0.5); audio.play('build_done'); this.panels.refresh(); },
+      onEvolve: (t) => { this.towerView.evolve(t); const x = t.x * TS + TS, y = t.y * TS; this.fx.ring(x, y + 10, 0xffffff, 10, 70, 0.7); this.fx.ring(x, y + 10, 0xffd24a, 6, 50, 0.9); this.fx.glow(x, y, 0xffe9a0, 130, 0.8); this.fx.spark(x, y, 0xffe9a0, 14, 90, 0.9, 1.2); this.cameras.main.flash(180, 255, 245, 200, true); audio.play('evolve'); this.panels.toast(`Tháp tiến hóa! (LV${t.level})`, 'ok'); },
+      onShoot: (t) => { const c = t.stats.kind, F = FX.kinds[c]; audio.play('shoot_' + c); if (this.fx.flashes < FX.flashMax) { this.fx.flashes++; this.fx.glow(t.x * TS + TS, t.y * TS - 12, F.glow, 34, 0.14, 0.7); } },
       onSold: (t) => { audio.play('sell'); if (this.selected === t) this.select(null); },
       onWallBuilt: (w) => { audio.play('build_done'); this.panels.refresh(); },
       onWallSold: () => { audio.play('sell'); },
@@ -79,10 +79,10 @@ export class GameScene extends Phaser.Scene {
     this.selected = null; this.placing = null; this.pause = new PauseState(() => settings.data.gameplay.autoPause); this.refT = 0; this.state = 'playing'; this.playTime = 0; this.peeking = false;
     this.panels = new Panels({
       ts: this.ts, economy: this.economy, close: () => this.select(null), onModal: (open) => { this.pause.set('skill', open); },
-      upgrade: (t) => { const r = this.ts.upgrade(t); if (!r.ok) return this.panels.toast(r.message); audio.play('upgrade'); this.fx.ring(t.x * TS + 16, t.y * TS + 16, 0xffd24a, 6, 34, 0.4); this.fx.float(t.x * TS + 16, t.y * TS - 26, 'LV' + t.level, '#ffffff'); this.panels.refresh(); if (t.pending > 0) this.panels.showSkill(t); },
-      pick: (t, b) => { const r = this.ts.pickBranch(t, b); if (!r.ok) return this.panels.toast(r.message); this.panels.hideSkill(); audio.play('pick'); this.fx.ring(t.x * TS + 16, t.y * TS + 16, parseInt(BRANCHES[b].color.slice(1), 16), 6, 40, 0.5); this.panels.refresh(); },
+      upgrade: (t) => { const r = this.ts.upgrade(t); if (!r.ok) return this.panels.toast(r.message); audio.play('upgrade'); this.fx.ring(t.x * TS + TS, t.y * TS + TS, 0xffd24a, 6, 34, 0.4); this.fx.float(t.x * TS + TS, t.y * TS - 26, 'LV' + t.level, '#ffffff'); this.panels.refresh(); if (t.pending > 0) this.panels.showSkill(t); },
+      pick: (t, b) => { const r = this.ts.pickBranch(t, b); if (!r.ok) return this.panels.toast(r.message); this.panels.hideSkill(); audio.play('pick'); this.fx.ring(t.x * TS + TS, t.y * TS + TS, parseInt(BRANCHES[b].color.slice(1), 16), 6, 40, 0.5); this.panels.refresh(); },
       reset: (t) => { const r = this.ts.resetPicks(t); if (!r.ok) this.panels.toast(r.message); this.panels.refresh(); },
-      sell: (t) => { const x = t.x * TS + 16, y = t.y * TS - 20; const r = this.ts.sell(t); if (r.ok) { this.fx.float(x, y, '+' + r.refund, '#ffd24a'); this.fx.puff(x, y + 16, 0xb89a6a, 10, 50, 0.4); this.select(null); } },
+      sell: (t) => { const x = t.x * TS + TS, y = t.y * TS - 20; const r = this.ts.sell(t); if (r.ok) { this.fx.float(x, y, '+' + r.refund, '#ffd24a'); this.fx.puff(x, y + 16, 0xb89a6a, 10, 50, 0.4); this.select(null); } },
     });
     this.events.once('shutdown', () => this.panels.destroy()); this.events.once('destroy', () => this.panels.destroy());
     this.ghost = this.add.sprite(0, 0, 'tower_0').setOrigin(0.5, 1).setAlpha(0.6).setVisible(false).setDepth(7e5); this.ghostG = this.add.graphics().setDepth(6.9e5);
@@ -153,14 +153,14 @@ export class GameScene extends Phaser.Scene {
     this.select(null); this.disarmWall(); this.placing = { id: pointer.id, key: '', tile: null, res: null, kind }; this.updateGhost(pointer);
   }
   updateGhost(p) {
-    const cam = this.cameras.main, w = p.positionToCamera(cam), tx = Math.floor(w.x / TS), ty = Math.floor((w.y - 56 / cam.zoom) / TS);
+    const cam = this.cameras.main, F = ECON.footprint[this.placing.kind], w = p.positionToCamera(cam), tx = Math.round(w.x / TS) - F / 2, ty = Math.round((w.y - 56 / cam.zoom) / TS) - F / 2; // (tx,ty) = ô TRÊN-TRÁI của khối F x F, tâm khối nằm tại điểm chạm
     const key = [tx, ty, this.grid.version, Math.floor(this.player.x), Math.floor(this.player.y)].join(',');
     if (key === this.placing.key) return; this.placing.key = key; this.placing.tile = { x: tx, y: ty };
     const wall = this.placing.kind === 'wall', r = this.ts.checkPlacement(tx, ty, [this.player], { ignoreGold: true, kind: wall ? 'wall' : 'tower' }), col = r.ok ? 0x7dff7d : 0xff6b6b; this.placing.res = r;
     this.ghost.setTexture(wall ? 'wall' : 'tower_0'); this.ghost.setScale((wall ? WALL_DISPLAY.width : TOWER_DISPLAY.widths[0]) / this.ghost.width);
-    this.ghost.setPosition(tx * TS + 16, ty * TS + (wall ? 33 : 34)).setVisible(true).setTint(col);
-    this.ghostG.clear().lineStyle(2, col, 0.9).strokeRect(tx * TS + 1, ty * TS + 1, TS - 2, TS - 2).fillStyle(col, 0.16).fillRect(tx * TS + 1, ty * TS + 1, TS - 2, TS - 2); // ô xây (1x1) luôn hiện rõ
-    if (!wall) this.ghostG.lineStyle(2, col, 0.7).strokeCircle(tx * TS + 16, ty * TS + 16, TOWER_TYPES.archer.base.range * TS).fillStyle(col, 0.08).fillCircle(tx * TS + 16, ty * TS + 16, TOWER_TYPES.archer.base.range * TS);
+    this.ghost.setPosition((tx + F / 2) * TS, (ty + F) * TS + 2).setVisible(true).setTint(col);
+    this.ghostG.clear().lineStyle(2, col, 0.9).strokeRect(tx * TS + 1, ty * TS + 1, F * TS - 2, F * TS - 2).fillStyle(col, 0.16).fillRect(tx * TS + 1, ty * TS + 1, F * TS - 2, F * TS - 2); // khối xây (2x2 ô) luôn hiện rõ
+    if (!wall) this.ghostG.lineStyle(2, col, 0.7).strokeCircle((tx + F / 2) * TS, (ty + F / 2) * TS, TOWER_TYPES.archer.base.range * TS).fillStyle(col, 0.08).fillCircle((tx + F / 2) * TS, (ty + F / 2) * TS, TOWER_TYPES.archer.base.range * TS);
   }
   endPlacement(p) {
     const pl = this.placing; if (!pl || p.id !== pl.id) return;
@@ -172,7 +172,7 @@ export class GameScene extends Phaser.Scene {
   onTap(p) {
     const ui = this.scene.get('UI'); if (ui?.isUiPointer?.(p) || this.player.dead || this.placing || this.pause.modalOpen) return;
     const w = p.positionToCamera(this.cameras.main), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS), fy = w.y / TS - ty;
-    const tower = this.ts.towerAt(tx, ty) || (fy < 0.5 ? this.ts.towerAt(tx, ty + 1) : null); // thân tháp cao hơn 1 ô: chạm phần trên cũng chọn
+    const tower = this.ts.towerAt(tx, ty) || (fy > 0.45 ? this.ts.towerAt(tx, ty + 1) : null); // ngọn tháp nhô lên ~½ ô phía trên khối 2x2: chạm phần ngọn cũng chọn
     if (tower) { this.disarmWall(); this.select(tower); return; }
     const wall = this.ts.wallAt(tx, ty); if (wall) { this.tapWall(wall); return; }
     this.disarmWall();
@@ -180,7 +180,7 @@ export class GameScene extends Phaser.Scene {
   }
   // Phá tường: chạm lần 1 = đánh dấu (nhấp nháy đỏ + thông báo hoàn vàng), chạm lần 2 trong 2,5s = bán. Tránh phá nhầm.
   tapWall(w) {
-    if (this.wallArm === w.id) { const x = w.x * TS + 16, y = w.y * TS - 6, r = this.ts.sellWall(w); this.disarmWall(); if (r.ok) this.fx.float(x, y, '+' + r.refund, '#ffd24a'); return; }
+    if (this.wallArm === w.id) { const x = w.x * TS + TS, y = w.y * TS - 6, r = this.ts.sellWall(w); this.disarmWall(); if (r.ok) this.fx.float(x, y, '+' + r.refund, '#ffd24a'); return; }
     this.wallArm = w.id; this.wallView.arm(w); this.panels.toast(`Chạm tường lần nữa để phá (hoàn ${this.ts.wallRefund()} vàng).`); this.wallTimer?.remove(); this.wallTimer = this.time.delayedCall(2500, () => this.disarmWall());
   }
   disarmWall() { this.wallArm = null; this.wallView?.arm(null); this.wallTimer?.remove(); }

@@ -22,27 +22,27 @@ export class TowerRenderer {
   }
   releaseArrow(p) { if (p.view) { p.view.setVisible(false); this.arrows.push(p.view); p.view = null; } if (p.glowView) { p.glowView.setVisible(false); this.glows.push(p.glowView); p.glowView = null; } }
   create(t) {
-    const x = t.x * TS + 16, yb = t.y * TS + 34, d = t.y * TS + 30, S = this.scene;
+    const F = ECON.footprint.tower, x = (t.x + F / 2) * TS, yb = (t.y + F) * TS + 2, d = (t.y + F) * TS - 2, S = this.scene;
     const [sw, sh, sa] = VISUAL.shadow.tower, v = {
-      shadow: S.add.image(x, t.y * TS + 30, 'fx_shadow').setDepth(0.6).setDisplaySize(sw, sh).setAlpha(sa), // bóng tiếp đất: tháp đứng vững trên nền
-      pool: S.add.image(x, t.y * TS + 27, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(d - 1).setScale(1.5, 0.6).setAlpha(0),
+      shadow: S.add.image(x, (t.y + F) * TS - 3, 'fx_shadow').setDepth(0.6).setDisplaySize(sw, sh).setAlpha(sa), // bóng tiếp đất: tháp đứng vững trên nền
+      pool: S.add.image(x, (t.y + F) * TS - 6, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(d - 1).setScale(3, 1.2).setAlpha(0),
       base: S.add.image(x, yb, 'tower_' + t.stage).setOrigin(0.5, 1).setDepth(d), scaf: S.add.image(x, yb, 'tower_scaffold').setOrigin(0.5, 1).setDepth(d + 1), flames: [],
-      crown: S.add.image(x, t.y * TS - 14, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(d + 2).setAlpha(0),
-      label: S.add.text(x, t.y * TS - 30, 'LV1', { fontFamily: FONT, fontSize: '10px', fontStyle: '700', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(9e5).setResolution(2),
+      crown: S.add.image(x, yb - 60, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(d + 2).setAlpha(0),
+      label: S.add.text(x, yb - 90, 'LV1', { fontFamily: FONT, fontSize: '10px', fontStyle: '700', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 1).setDepth(9e5).setResolution(2),
       stage: t.stage, puffT: 0, sparkT: Math.random(), text: '', evT: 0, x, yb,
     };
     this.fit(v, t); this.views.set(t.id, v); return v;
   }
-  // Kích thước hiển thị theo hình tiến hóa: rộng ~1 ô (TOWER_DISPLAY.widths) => hai tháp liền kề không chồng lên nhau, ảnh gốc không bị biến dạng (giữ tỉ lệ)
+  // Kích thước hiển thị theo hình tiến hóa: rộng ~2 ô (TOWER_DISPLAY.widths) => hai tháp liền kề không chồng lên nhau, ảnh gốc không bị biến dạng (giữ tỉ lệ)
   fit(v, t) {
-    const dw = TOWER_DISPLAY.widths[t.stage] ?? 33; v.k0 = dw / v.base.width; v.dw = dw; v.dh = v.base.height * v.k0; v.base.setScale(v.k0);
+    const dw = TOWER_DISPLAY.widths[t.stage] ?? 64; v.k0 = dw / v.base.width; v.dw = dw; v.dh = v.base.height * v.k0; v.base.setScale(v.k0);
     v.scaf.setDisplaySize(dw * 1.25, v.dh * 1.05); v.label.setY(v.yb - v.dh - 3); v.crown.setY(v.yb - v.dh * 0.8);
     this.buildFlames(v, t);
   }
   // Ngọn lửa động đặt đúng chỗ các ngọn đuốc của hình tháp hiện tại (TOWER_FLAMES). Hình 0-1 không có đuốc.
   buildFlames(v, t) {
     for (const f of v.flames) { f.s.destroy(); f.g.destroy(); } v.flames = []; const list = TOWER_FLAMES[t.stage]; if (!list) return;
-    const kind = t.stage === TOWER_FLAME_BLUE ? 'b' : 'o', S = this.scene, d = t.y * TS + 30;
+    const kind = t.stage === TOWER_FLAME_BLUE ? 'b' : 'o', S = this.scene, d = (t.y + ECON.footprint.tower) * TS - 2;
     for (const [nx, ny, sc] of list) {
       const w = v.dw * 0.17 * sc, x = v.x + (nx - 0.5) * v.dw, y = v.yb - (1 - ny) * v.dh + 1;
       const g = S.add.image(x, y - w * 0.6, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(FLAME_COL[kind]).setDepth(d + 3).setAlpha(0.35);
@@ -69,8 +69,8 @@ export class TowerRenderer {
       const top = this.dominant(t), col = top ? hexOf(BRANCHES[top].color) : NONE;
       if (building) {
         const fr = v.base.frame; v.base.setCrop(0, fr.realHeight * (1 - p), fr.realWidth, fr.realHeight * p); v.scaf.setVisible(true); v.pool.setAlpha(0); v.crown.setAlpha(0); this.flicker(v, dt, now, false, false);
-        const by = v.yb - v.dh - 8; g.fillStyle(0x000000, 0.65).fillRect(t.x * TS + 2, by, 28, 6); g.fillStyle(0xffd24a, 1).fillRect(t.x * TS + 3, by + 1, 26 * Math.max(0, p), 4);
-        v.puffT -= dt; if (v.puffT <= 0) { v.puffT = 0.22; this.fx.puff(t.x * TS + 16, t.y * TS + 28, 0xb89a6a, 3, 25, 0.35); }
+        const by = v.yb - v.dh - 8; g.fillStyle(0x000000, 0.65).fillRect(v.x - 22, by, 44, 6); g.fillStyle(0xffd24a, 1).fillRect(v.x - 21, by + 1, 42 * Math.max(0, p), 4);
+        v.puffT -= dt; if (v.puffT <= 0) { v.puffT = 0.22; this.fx.puff(v.x + rnd(-14, 14), v.yb - 6, 0xb89a6a, 3, 32, 0.4); }
       } else {
         if (v.base.isCropped) v.base.setCrop(); v.scaf.setVisible(false);
         t.flash = Math.max(0, (t.flash || 0) - dt * 7); const lv = t.level, st = t.stage, ph = 0.75 + 0.25 * Math.sin(now * 2.2 + t.id), fl = t.flash;
@@ -81,7 +81,7 @@ export class TowerRenderer {
         v.crown.setTint(col).setScale(0.55 + st * 0.12 + fl * 0.25).setAlpha(st >= 2 ? Math.min(0.7, 0.22 + st * 0.08) * ph + fl * 0.5 : fl * 0.45);
         const cam = this.scene.cameras.main.worldView, onScreen = v.x > cam.left - 40 && v.x < cam.right + 40 && v.yb > cam.top - 20 && v.yb - v.dh < cam.bottom + 40;
         this.flicker(v, dt, now, onScreen, true); if (v.flames.length) v.pool.setAlpha(Math.min(0.6, 0.18 + lv * 0.03) * (0.8 + 0.2 * Math.sin(now * 7 + t.id * 2.3)));   // ánh đuốc hắt xuống nền, chập chờn
-        v.sparkT -= dt; if (st >= 3 && v.sparkT <= 0) { v.sparkT = 0.55 - st * 0.07; this.fx.spark(v.x + (Math.random() - 0.5) * 22, t.y * TS - 6 + Math.random() * 16, col, 1, 22, 0.8, 0.6); }
+        v.sparkT -= dt; if (st >= 3 && v.sparkT <= 0) { v.sparkT = 0.55 - st * 0.07; this.fx.spark(v.x + (Math.random() - 0.5) * 40, v.yb - v.dh * 0.9 + Math.random() * 20, col, 1, 22, 0.8, 0.6); }
       }
       const txt = `LV${t.level}${t.pending > 0 ? ' ★' : ''}`; if (txt !== v.text) { v.text = txt; v.label.setText(txt); }
       v.label.setColor(top ? BRANCHES[top].color : '#ffffff').setVisible(!building);
@@ -93,6 +93,6 @@ export class TowerRenderer {
       p.trailT = (p.trailT ?? 0) - dt; if (p.trailT <= 0) { p.trailT = p.kind === 'arrow' ? 0.07 : 0.04; const c = p.crit ? 0xffd24a : FX.kinds[p.kind].color; this.fx.trail(x, y, c, p.crit ? 1 : 0.8); }
     }
     this.rangeG.clear();
-    if (selected && sys.towers.includes(selected)) { this.rangeG.lineStyle(2, 0xffffff, 0.5).strokeCircle(selected.x * TS + 16, selected.y * TS + 16, selected.stats.range * TS); this.rangeG.fillStyle(0xffffff, 0.06).fillCircle(selected.x * TS + 16, selected.y * TS + 16, selected.stats.range * TS); }
+    if (selected && sys.towers.includes(selected)) { this.rangeG.lineStyle(2, 0xffffff, 0.5).strokeCircle((selected.x + ECON.footprint.tower / 2) * TS, (selected.y + ECON.footprint.tower / 2) * TS, selected.stats.range * TS); this.rangeG.fillStyle(0xffffff, 0.06).fillCircle((selected.x + ECON.footprint.tower / 2) * TS, (selected.y + ECON.footprint.tower / 2) * TS, selected.stats.range * TS); }
   }
 }

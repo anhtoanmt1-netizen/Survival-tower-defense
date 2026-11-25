@@ -22,7 +22,7 @@ export class ObjectLayer {
     const { width: W, height: H, tiles, feat } = map, V = VISUAL.tree, SH = VISUAL.shadow;
     const add = (id, x, by, wW, flip = false) => { const tx = scene.textures.get(id).getSourceImage(), img = scene.add.image(x, by, id).setOrigin(0.5, 1).setScale(wW / tx.width).setDepth(by).setFlipX(flip); this.items.push({ img, id }); this.ids.add(id); return img; };
     const shadow = (x, by, [w, h, a]) => scene.add.image(x, by - 1, 'fx_shadow').setDepth(0.5).setDisplaySize(w, h).setAlpha(a);
-    const tree = (cx, by, sp, h, big) => { const k = 0.94 + ((h >> 10) & 15) / 160, wW = (big ? V.displayW : V.legacyW) * k, s = big ? 1.1 : 0.8; shadow(cx, by, [SH.tree[0] * (wW / V.displayW) * (big ? 1 : 1.5), SH.tree[1], SH.tree[2]]);
+    const tree = (cx, by, sp, h, big) => { const k = 0.94 + ((h >> 10) & 15) / 160, wW = (big ? V.displayW : V.legacyW) * k * (scene.textures.get('tree_' + sp).getSourceImage().width / V.refW), s = big ? 1.1 : 0.8; shadow(cx, by, [SH.tree[0] * (wW / V.displayW) * (big ? 1 : 1.5), SH.tree[1], SH.tree[2]]);
       const img = add('tree_' + sp, cx, by, wW, !!(h & 0x100)); this.trees.push({ img, x: cx, y: by, hh: img.displayHeight, sp, ph: (h % 628) / 100, spd: 0.9 + ((h >> 4) % 7) / 10, amp: (0.012 + ((h >> 8) % 9) / 500) * (big ? 0.85 : 1) * s }); };
     if (map.trees) for (const [x, y] of map.trees) { const h = vh(x, y); tree((x + 1) * TS + ((h & 7) - 3.5) * 0.5, (y + 2) * TS + V.baseOffset + (((h >> 3) & 3) - 1.5) * 0.6, treeSpecies(map, x, y, zone, zones, TREE_ZONES), h, true); }
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {

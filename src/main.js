@@ -14,7 +14,7 @@ import { initScreen, bindScreen } from './ui/screen.js';
 import { initSettingsPanel } from './ui/settingsPanel.js';
 import { hydrateIcons, iconSvg, rasterizeIcons } from './ui/icons.js';
 import { MapPreview } from './ui/mapPreview.js';
-const $ = (id) => document.getElementById(id), PHASER_ICONS = ['heart', 'coin', 'hammer', 'shield', 'dash', 'bolt', 'gear', 'flag', 'slime', 'pause', 'sword'];
+const $ = (id) => document.getElementById(id), PHASER_ICONS = ['heart', 'coin', 'hammer', 'shield', 'dash', 'bolt', 'gear', 'camera', 'flag', 'slime', 'pause', 'sword'];
 let game = null, currentMapId = '', pending = '';
 if (!GAME_CONFIG.shirtColors.includes(settings.data.shirt)) settings.set({ shirt: GAME_CONFIG.shirtColors[0] });
 hydrateIcons(); initScreen();

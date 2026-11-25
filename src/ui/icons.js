@@ -41,6 +41,7 @@ export const ICONS = {
   trophy: `<path${F} d="M7.5 4.5h9v5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6.5H4.6c0 3 1.2 4.4 3.2 4.6M16.5 6.5h2.9c0 3-1.2 4.4-3.2 4.6M12 14v3.6M8.6 20h6.8"/>`,
   lock: `<rect${F} x="5.6" y="10.6" width="12.8" height="9.6" rx="2.2"/><path d="M8.4 10.6V8a3.6 3.6 0 0 1 7.2 0v2.6"/><circle${S} cx="12" cy="15.4" r="1.3"/>`,
   wall: `<path${F} d="M3.6 7h16.8v12.4H3.6z"/><path d="M3.6 11.1h16.8M3.6 15.2h16.8M9.2 7v4.1M14.8 11.1v4.1M9.2 15.2v4.2"/>`,
+  camera: `<path${F} d="M4 8h3.2l1.4-2h6.8l1.4 2H20a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.3"/><path d="M17.6 10.6h.6"/>`,
   brush: `<path${F} d="M4.6 19.4c2.6 0 4-1.2 4-3.2l-1.6-1.6c-2 0-2.4 2-2.4 4.8z"/><path d="M8.2 14.8L18.6 4.4a1.9 1.9 0 0 1 2.7 2.7L10.8 17.4"/>`,
 };
 export const iconSvg = (name, { color = 'currentColor', size = 24, cls = 'ic' } = {}) => `<svg class="${cls}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:${color}">${ICONS[name] || ''}</svg>`;

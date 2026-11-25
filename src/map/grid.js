@@ -21,6 +21,8 @@ export class Grid {
     return null;
   }
   targetTile(p) { const x = Math.floor(p.x), y = Math.floor(p.y); return this.isWalkable(x, y) ? { x, y } : this.nearestWalkable(x, y); }
+  // đặt/gỡ chiếm chỗ cả khối n x n (góc trên-trái x,y); chỉ tăng version MỘT lần để flow field tính lại 1 lần
+  setBlockedRect(x, y, n, v) { let ch = false; for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const cx = x + i, cy = y + j, k = cy * this.width + cx; if (this.inBounds(cx, cy) && this.extra[k] !== (v ? 1 : 0)) { this.extra[k] = v ? 1 : 0; ch = true; } } if (ch) this.version++; }
   isWalkable(x, y) { return this.inBounds(x, y) && !isBlocking(this.tiles[y * this.width + x]) && !this.extra[y * this.width + x]; }
   isBuildable(x, y) { return this.inBounds(x, y) && isBuildableTerrain(this.tiles[y * this.width + x]) && !this.extra[y * this.width + x]; }
 }
