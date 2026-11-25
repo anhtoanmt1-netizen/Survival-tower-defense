@@ -24,10 +24,13 @@ export class Mirror {
     if (!t) { t = { id: info.id, x: info.x, y: info.y, type: info.type, cd: 0, angle: 0, kills: 0 }; this.ts.towers.push(t); this.grid.setBlocked(t.x, t.y, true); }
     Object.assign(t, { level: info.level, picks: info.picks.slice(), state: info.state, buildT: info.buildT, invested: info.invested }); this.ts.refresh(t); return t;
   }
+  applyWall(info) { if (this.ts.walls.some((w) => w.id === info.id)) return; this.ts.walls.push({ id: info.id, x: info.x, y: info.y }); this.grid.setBlocked(info.x, info.y, true); this.hooks.onWallAdded?.(info); }
+  removeWall(id) { const i = this.ts.walls.findIndex((w) => w.id === id); if (i < 0) return; const w = this.ts.walls[i]; this.ts.walls.splice(i, 1); this.grid.setBlocked(w.x, w.y, false); this.hooks.onWallRemoved?.(w); }
   removeTower(id) { const i = this.ts.towers.findIndex((x) => x.id === id); if (i < 0) return; const t = this.ts.towers[i]; this.ts.towers.splice(i, 1); this.grid.setBlocked(t.x, t.y, false); this.hooks.onTowerRemoved?.(t); }
   applyStart(msg) { // cũng dùng khi vào lại phòng: đối chiếu để bỏ tháp đã bị bán trong lúc mất kết nối
     const ids = new Set(msg.towers.map((t) => t.id)); for (const t of this.ts.towers.slice()) if (!ids.has(t.id)) this.removeTower(t.id);
-    for (const info of msg.towers) this.applyTower(info); this.applySnapshot(msg.snap, true);
+    const wids = new Set((msg.walls || []).map((w) => w.id)); for (const w of this.ts.walls.slice()) if (!wids.has(w.id)) this.removeWall(w.id);
+    for (const info of msg.towers) this.applyTower(info); for (const info of msg.walls || []) this.applyWall(info); this.applySnapshot(msg.snap, true);
   }
   // --- snapshot ---
   applySnapshot(s, first = false) {
@@ -60,6 +63,7 @@ export class Mirror {
   event(ev, first) {
     const [k] = ev;
     if (k === 'tw') { if (ev[1] === 'del') this.removeTower(ev[2]); else this.applyTower(ev[2]); }
+    else if (k === 'wl') { if (ev[1] === 'del') this.removeWall(ev[2]); else this.applyWall(ev[2]); }
     else if (k === 'mh') { const m = this.byId.get(ev[1]); if (m) m.hitFlash = 0.12; }
     if (!first) this.hooks.onEvent?.(ev);
   }

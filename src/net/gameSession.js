@@ -4,7 +4,7 @@ import { mapChecksum, configChecksum } from './protocol.js';
 // Nối NetClient với Mirror: nhận 'start'/'snap'/'room'/'end'... và phát sự kiện cho giao diện. Dùng chung cho game và kiểm thử.
 export class GameSession {
   constructor(client, hooks = {}) { this.c = client; this.mirror = null; this.room = null; this.you = null; this.sh = { ...hooks }; this.h = {}; // sh: hàm xử lý do scene gắn vào sau khi tạo
-    this.hooks = Object.fromEntries(['onFree', 'onProjFree', 'onSpawn', 'onHurt', 'onDead', 'onRevive', 'onEvent', 'onTowerRemoved'].map((n) => [n, (...a) => this.sh[n]?.(...a)])); client.onmessage = (m) => this.onMsg(m); }
+    this.hooks = Object.fromEntries(['onFree', 'onProjFree', 'onSpawn', 'onHurt', 'onDead', 'onRevive', 'onEvent', 'onTowerRemoved', 'onWallAdded', 'onWallRemoved'].map((n) => [n, (...a) => this.sh[n]?.(...a)])); client.onmessage = (m) => this.onMsg(m); }
   on(name, fn) { this.h[name] = fn; return this; }
   emit(name, ...a) { this.h[name]?.(...a); }
   onMsg(m) {

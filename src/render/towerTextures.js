@@ -1,6 +1,8 @@
 import { make, rect, disc } from './textures.js';
+import { createFlameTextures } from './flameFx.js';
 // Texture hiệu ứng + mũi tên + giàn giáo xây dựng (hình tháp thật lấy từ Tower.png, nạp ở GameScene.preload).
 export function createFxTextures(scene) {
+  createFlameTextures(scene);
   make(scene, 'tower_scaffold', 52, 64, (c) => {
     for (const x of [6, 42]) rect(c, '#9b7a50', x, 14, 4, 48);
     for (const y of [22, 36, 50]) rect(c, '#b08d5e', 6, y, 40, 3);

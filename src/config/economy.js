@@ -3,6 +3,7 @@ export const ECON = {
   startGold: 120,
   buildCost: 60,          // giá xây tháp CỐ ĐỊNH (không tăng theo số tháp/thời gian); độ khó cao có thể ghi đè ở config/difficulty.js
   sellRefund: 0.6,        // hoàn 60% tổng vàng đã đầu tư
+  wallCost: 5,            // giá xây TƯỜNG (1 ô) – cố định ở mọi độ khó; xây tức thì
   buildTime: 2,           // giây
   upgradeCosts: [45, 70], // LV1->2, LV2->3; các cấp sau theo upgradeGrowth
   upgradeGrowth: 1.36,

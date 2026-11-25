@@ -4,6 +4,7 @@ import { ActionButton } from '../ui/ActionButton.js';
 import { createUiTextures } from '../render/uiTextures.js';
 import { THEMES } from '../config/themes/index.js';
 import { T } from '../map/tiles.js';
+import { previewBuffer, previewScale } from '../ui/mapPreview.js';
 import { safeInsets } from '../ui/safeArea.js';
 import { SKILLS, SPEED_UPGRADE, speedUpgradeCost } from '../config/skills.js';
 import { WAVE_SETTINGS } from '../config/waves.js';
@@ -26,6 +27,8 @@ export class UIScene extends Phaser.Scene {
     const tex = this.textures.createCanvas('minimap', map.width, map.height), ctx = tex.getContext(), img = ctx.createImageData(map.width, map.height);
     for (let i = 0; i < map.tiles.length; i++) { const c = rgb[map.tiles[i]]; img.data[i * 4] = c[0]; img.data[i * 4 + 1] = c[1]; img.data[i * 4 + 2] = c[2]; img.data[i * 4 + 3] = 255; }
     ctx.putImageData(img, 0, 0); tex.refresh(); tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    // Sau khung đầu tiên: thay bằng bản đồ dựng bằng CHÍNH bộ ghép của màn xem trước (cùng màu, bờ nước, cây, vách) => minimap và bản xem trước đồng bộ phong cách
+    this.time.delayedCall(40, () => this.richMinimap());
     this.expanded = false; this.mmSize = 112;
     this.mmFrame = S(this.add.graphics().setDepth(1000)); this.mm = S(this.add.image(0, 0, 'minimap').setOrigin(1, 0).setDepth(1001).setInteractive());
     this.mm.on('pointerdown', (p) => { audio.play('click'); this.onMinimap(p); });
@@ -47,10 +50,7 @@ export class UIScene extends Phaser.Scene {
     this.buildOpen = false; this.cardTxt = '';
     this.btn = new ActionButton(this, { color: 0xe0b13a, iconKey: 'ui_icon_hammer', onTap: () => { audio.play(this.buildOpen ? 'close' : 'open'); this.setBuildOpen(!this.buildOpen); } });
     this.btnT = S(this.add.text(0, 0, 'XÂY', { fontFamily: FONT, fontSize: '11px', fontStyle: '800', color: '#2b1f06' }).setOrigin(0.5).setDepth(1010));
-    this.cardG = S(this.add.graphics().setDepth(1000).setVisible(false));
-    this.card = S(this.add.rectangle(0, 0, 196, 64, 0x000000, 0.001).setDepth(1001).setVisible(false).setInteractive());
-    this.cardT = S(this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '12px', fontStyle: '600', color: '#fff', align: 'center', lineSpacing: 3 }).setOrigin(0.5).setDepth(1002).setVisible(false));
-    this.card.on('pointerdown', (p) => { this.setBuildOpen(false); game.beginPlacement(p); });
+    this.buildMenu(game);
     // --- nút kỹ năng + nâng tốc độ ---
     this.sk = {
       invincible: new ActionButton(this, { color: 0xc9a227, iconKey: 'ui_icon_shield', onTap: () => game.useSkill('invincible') }),
@@ -59,7 +59,49 @@ export class UIScene extends Phaser.Scene {
     };
     this.scale.on('resize', this.layout, this); this.layout();
   }
-  setBuildOpen(v) { this.buildOpen = v; this.card.setVisible(v); this.cardT.setVisible(v); this.cardG.setVisible(v); }
+  // ---- BẢNG XÂY DỰNG: 2 thẻ có ICON (Tháp / Tường), kéo thẻ ra bản đồ để đặt. Mở/đóng có hoạt ảnh trượt + phóng (so le từng thẻ). ----
+  buildMenu(game) {
+    const S = (o) => o.setScrollFactor(0), W = 94, H = 96, GAP = 8; this.MW = W * 2 + GAP + 16; this.MH = H + 16; this.mCards = [];
+    this.menu = S(this.add.container(0, 0).setDepth(1001).setVisible(false).setAlpha(0)); this.menuBg = S(this.add.graphics()); this.menu.add(this.menuBg);
+    const defs = [
+      { kind: 'tower', name: 'Tháp cung tên', tex: 'tower_0', h: 50, accent: 0xe0b13a, cost: () => game.ts.buildCost() },
+      { kind: 'wall', name: 'Tường', tex: 'wall', h: 40, accent: 0xd35a4a, cost: () => game.ts.wallCost() },
+    ];
+    defs.forEach((d, i) => {
+      const c = S(this.add.container((i - 0.5) * (W + GAP), 0)), bg = S(this.add.graphics()), icon = S(this.add.image(0, -8, d.tex)).setOrigin(0.5, 0.5);
+      icon.setScale(d.h / icon.height); const name = S(this.add.text(0, H / 2 - 30, d.name, { fontFamily: FONT, fontSize: '10.5px', fontStyle: '800', color: '#fff' }).setOrigin(0.5)), coin = S(this.add.image(-14, H / 2 - 13, 'ui_icon_coin').setDisplaySize(15, 15).setTint(0xffd24a));
+      const price = S(this.add.text(-4, H / 2 - 13, '', { fontFamily: FONT, fontSize: '13px', fontStyle: '800', color: '#ffe9a0' }).setOrigin(0, 0.5)), zone = S(this.add.rectangle(0, 0, W, H, 0x000000, 0.001).setInteractive());
+      const paint = (hot) => { bg.clear().fillStyle(hot ? 0x2c4636 : 0x203528, 1).fillRoundedRect(-W / 2, -H / 2, W, H, 11).lineStyle(2, d.accent, hot ? 1 : 0.8).strokeRoundedRect(-W / 2, -H / 2, W, H, 11); bg.fillStyle(d.accent, 0.16).fillRoundedRect(-W / 2 + 3, -H / 2 + 3, W - 6, 30, { tl: 8, tr: 8, bl: 0, br: 0 }); };
+      paint(false); c.add([bg, icon, name, coin, price, zone]);
+      zone.on('pointerover', () => { paint(true); this.tweens.add({ targets: c, scale: 1.05, duration: 120 }); }).on('pointerout', () => { paint(false); this.tweens.add({ targets: c, scale: 1, duration: 120 }); });
+      zone.on('pointerdown', (p) => { if (!this.buildOpen) return; audio.play('click'); this.tweens.add({ targets: c, scale: 0.94, duration: 70, yoyo: true }); this.setBuildOpen(false); game.beginPlacement(p, d.kind); });
+      this.menu.add(c); this.mCards.push({ d, c, price, name, coin, icon, last: -1, ok: true });
+    });
+  }
+  layoutMenu() { // đặt bảng ngay phía trên cụm nút kỹ năng; vẽ khung nền
+    const { MW, MH } = this; this.menuX = this.mx0; this.menuY = this.my0; this.menu.setPosition(this.menuX, this.menuY + (this.buildOpen ? 0 : 14));
+    this.menuBg.clear().fillStyle(0x0c1710, 0.5).fillRoundedRect(-MW / 2 - 3, -MH / 2 + 3, MW + 6, MH + 3, 16).fillStyle(0x14221b, 0.97).fillRoundedRect(-MW / 2, -MH / 2, MW, MH, 14).lineStyle(2, 0xe0b13a, 0.95).strokeRoundedRect(-MW / 2, -MH / 2, MW, MH, 14);
+  }
+  setBuildOpen(v) {
+    if (v === this.buildOpen && this.menu.visible === v) return; this.buildOpen = v; this.menuTween?.stop(); const m = this.menu, y = this.menuY;
+    this.mCards.forEach((o, i) => { this.tweens.killTweensOf(o.c); o.c.setScale(1); });
+    if (v) {   // mở: trượt lên + phóng to (back-out), từng thẻ nảy so le
+      m.setVisible(true).setAlpha(0).setScale(0.82).setY(y + 22); this.menuTween = this.tweens.add({ targets: m, alpha: 1, scale: 1, y, duration: 220, ease: 'Back.easeOut' });
+      this.mCards.forEach((o, i) => { o.c.setAlpha(0).setScale(0.85); this.tweens.add({ targets: o.c, alpha: 1, scale: 1, duration: 200, delay: 60 + i * 55, ease: 'Back.easeOut' }); });
+    } else {   // đóng: thu nhỏ + mờ dần rồi ẩn hẳn
+      this.menuTween = this.tweens.add({ targets: m, alpha: 0, scale: 0.9, y: y + 14, duration: 150, ease: 'Quad.easeIn', onComplete: () => { if (!this.buildOpen) m.setVisible(false); } });
+    }
+  }
+  richMinimap() {
+    try {
+      const { map } = this.d, ids = ['grass', 'flower', 'dirt', 'sand', 'shallow', 'deep', 'pave'], m = {}, c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
+      for (const n of ids) { const im = this.textures.get('fill_' + n).getSourceImage(); c.width = im.width; c.height = im.height; x.clearRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0); m['fill_' + n] = { w: im.width, h: im.height, data: x.getImageData(0, 0, im.width, im.height).data }; }
+      const buf = previewBuffer(map, { get: (id) => m[id] }, previewScale(map.width)); if (!this.scene.isActive()) return;
+      if (this.textures.exists('minimap_rich')) this.textures.remove('minimap_rich');
+      const tex = this.textures.createCanvas('minimap_rich', buf.w, buf.h); tex.getContext().putImageData(new ImageData(buf.data, buf.w, buf.h), 0, 0); tex.refresh(); tex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+      this.mm.setTexture('minimap_rich'); this.layout();
+    } catch (e) { console.warn('Minimap: giữ bản màu phẳng', e); }
+  }
   onMinimap(p) {
     if (!this.expanded) { this.expanded = true; this.layout(); return; }
     const s = this.mmSize, { map } = this.d, lx = (p.x - (this.mmX - s)) / s, ly = (p.y - this.mmY) / s;
@@ -78,13 +120,12 @@ export class UIScene extends Phaser.Scene {
     const rb = 36 * u, bx = width - ins.right - 24 - rb, by = height - ins.bottom - 24 - rb;
     this.btn.layout(bx, by, rb, -5 * u, 0); this.btnT.setPosition(bx, by + 17 * u);
     this.sk.invincible.layout(bx - 80 * u, by + 10 * u, 30 * u); this.sk.phase.layout(bx - 62 * u, by - 62 * u, 30 * u); this.sk.speed.layout(bx + 4 * u, by - 88 * u, 26 * u, -7 * u, 14 * u);
-    this.cardX = bx + rb - 98; this.cardY = by - 88 * u - 26 * u - 12 - 32; this.card.setPosition(this.cardX, this.cardY); this.cardT.setPosition(this.cardX, this.cardY);
-    this.cardG.clear().fillStyle(0x14221b, 0.96).fillRoundedRect(this.cardX - 98, this.cardY - 32, 196, 64, 10).lineStyle(2, 0xe0b13a, 0.95).strokeRoundedRect(this.cardX - 98, this.cardY - 32, 196, 64, 10);
+    this.mx0 = Math.min(bx + rb - this.MW / 2, width - ins.right - 8 - this.MW / 2); this.my0 = by - 88 * u - 26 * u - 14 - this.MH / 2; this.layoutMenu();
   }
   isUiPointer(p) {
     const inR = (x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h, near = (b) => Math.hypot(p.x - b.hit.x, p.y - b.hit.y) <= b.hit.r + 8, S = this.mmSize;
     return this.joystick.ownsPointer(p) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || near(this.setBtn) || Object.values(this.sk).some(near)
-      || (this.buildOpen && inR(this.cardX - 98, this.cardY - 32, 196, 64)) || [this.mmBack, this.mmShrink].some((b) => b.visible && b.getBounds().contains(p.x, p.y));
+      || (this.buildOpen && inR(this.menuX - this.MW / 2, this.menuY - this.MH / 2, this.MW, this.MH)) || [this.mmBack, this.mmShrink].some((b) => b.visible && b.getBounds().contains(p.x, p.y));
   }
   update(_, ms) {
     const { map, player, camera: cam, game } = this.d, S = this.mmSize, sx = S / map.width, sy = S / map.height, x0 = this.mmX - S, y0 = this.mmY, ts = 32;
@@ -92,7 +133,8 @@ export class UIScene extends Phaser.Scene {
     // minimap động
     const g = this.mmG; g.clear();
     g.fillStyle(0x4aa3f0, 1); for (const t of game.ts.towers) g.fillRect(x0 + t.x * sx - 1, y0 + t.y * sy - 1, Math.max(3, sx * 1.6), Math.max(3, sy * 1.6));
-    g.fillStyle(0xb06cff, 1); for (const gt of game.activeGates) g.fillRect(x0 + gt.x * sx - 3, y0 + gt.y * sy - 3, 6, 6);
+    g.fillStyle(0xc9b88a, 1); for (const w of game.ts.walls) g.fillRect(x0 + w.x * sx, y0 + w.y * sy, Math.max(2, sx), Math.max(2, sy));
+    for (const gt of game.activeGates) { const gx = x0 + (gt.x + 0.5) * sx, gy = y0 + (gt.y + 0.5) * sy; g.fillStyle(0xb06cff, 1).fillCircle(gx, gy, 3.4).lineStyle(1.5, 0xffffff, 1).strokeCircle(gx, gy, 4.6); }
     g.fillStyle(0xff3b30, 1); for (const m of world.monsters) if (!m.dying) g.fillRect(x0 + m.x * sx - 1, y0 + m.y * sy - 1, Math.max(2, sx), Math.max(2, sy));
     const vw = cam.width / cam.zoom / ts, vh = cam.height / cam.zoom / ts;
     g.lineStyle(1, 0xffffff, 0.85).strokeRect(x0 + (cam.midPoint.x / ts - vw / 2) * sx, y0 + (cam.midPoint.y / ts - vh / 2) * sy, vw * sx, vh * sy);
@@ -108,9 +150,9 @@ export class UIScene extends Phaser.Scene {
     const lv = player.speedLevel, max = lv >= SPEED_UPGRADE.maxLevel, cost = Math.round(speedUpgradeCost(lv) * diff.upgradeMul), poor = game.economy.gold < cost;
     this.sk.speed.setBadge(lv > 0 ? 'Lv' + lv : ''); this.sk.speed.setState({ alpha: max || poor ? 0.55 : 1, sub: max ? 'TỐI ĐA' : String(cost), subColor: !max && !poor ? '#ffe9a0' : '#ffffff', ready: !max && !poor });
     // thẻ xây + chữ HUD
-    const bc = game.ts.buildCost(), txt = `Tháp cung tên\nGiá ${bc} vàng · kéo ra bản đồ`; if (txt !== this.cardTxt) { this.cardTxt = txt; this.cardT.setText(txt); }
-    this.card.setAlpha(1); this.cardT.setAlpha(game.economy.gold >= bc ? 1 : 0.5); this.cardG.setAlpha(game.economy.gold >= bc ? 1 : 0.6);
-    this.btn.setState({ alpha: player.dead ? 0.3 : 1, active: this.buildOpen, activeFrac: 1, ready: !player.dead && !this.buildOpen && game.economy.gold >= bc }); this.btnT.setAlpha(player.dead ? 0.3 : 1);
+    const bc = game.ts.buildCost(), gold = game.economy.gold;
+    for (const o of this.mCards) { const cost = o.d.cost(), ok = gold >= cost; if (o.last !== cost) { o.last = cost; o.price.setText(String(cost)); } if (o.ok !== ok) { o.ok = ok; o.price.setColor(ok ? '#ffe9a0' : '#ff7b7b'); } o.icon.setAlpha(ok ? 1 : 0.45); o.name.setAlpha(ok ? 1 : 0.6); o.coin.setAlpha(ok ? 1 : 0.6); }
+    this.btn.setState({ alpha: player.dead ? 0.3 : 1, active: this.buildOpen, activeFrac: 1, ready: !player.dead && !this.buildOpen && game.economy.gold >= Math.min(bc, game.ts.wallCost()) }); this.btnT.setAlpha(player.dead ? 0.3 : 1);
     this.fpsT += ms; if (this.fpsT > 500) { this.fpsT = 0; this.fpsText = Math.round(this.game.loop.actualFps) + ' FPS'; }
     const total = WAVE_SETTINGS.totalWaves, cdn = Math.ceil(Math.max(0, dir.countdown));
     const nextWave = dir.wave + 1, ns = dir.wave < total ? dir.specFor(nextWave) : null, next = ns ? `${dir.wave === 0 ? 'Đợt đầu' : 'Đợt ' + nextWave} sau ${cdn}s (${ns.count} slime${ns.boss ? ', THỬ THÁCH' : ''})` : 'Đã xuất hiện đủ ' + total + ' đợt – diệt hết để thắng';

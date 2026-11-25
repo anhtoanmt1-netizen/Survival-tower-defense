@@ -75,6 +75,7 @@ export class Room {
     this.ts = new TowerSystem({ grid: this.grid, world: this.world, economy: this.economy, gates: this.gates, rng: this.rng, hooks: {
       onBuildStart: (t) => this.events.push(['tw', 'add', this.towerInfo(t)]), onBuilt: (t) => this.events.push(['tb', t.id]),
       onChanged: (t) => this.events.push(['tw', 'upd', this.towerInfo(t)]), onSold: (t) => this.events.push(['tw', 'del', t.id]),
+      onWallBuilt: (w) => this.events.push(['wl', 'add', this.wallInfo(w)]), onWallSold: (w) => this.events.push(['wl', 'del', w.id]),
       onHitFx: (pr, m) => this.events.push(['h', m.id, KINDS.indexOf(pr.kind), pr.crit ? 1 : 0, pr.slow ? pr.slow.radius : 0]),
     } });
     const spots = this.spawnSpots(n); let i = 0;
@@ -88,10 +89,11 @@ export class Room {
     for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (this.grid.isWalkable(s.x + dx, s.y + dy)) cells.push({ x: s.x + dx + 0.5, y: s.y + dy + 0.5, d: Math.hypot(dx, dy) });
     cells.sort((a, b) => a.d - b.d); return cells.slice(0, Math.max(n, 1));
   }
+  wallInfo(w) { return { id: w.id, x: w.x, y: w.y }; }
   towerInfo(t) { return { id: t.id, x: t.x, y: t.y, type: t.type, level: t.level, picks: t.picks, state: t.state, buildT: r2(t.buildT), invested: t.invested }; }
   startMsg(p) {
     return { t: 'start', you: p.id, mapId: this.mapId, mapSum: mapChecksum(this.map.tiles), cfg: configChecksum(), gates: this.gates.map((g) => this.map.gates.indexOf(g)), opts: this.opts,
-      players: [...this.players.values()].map((x) => ({ id: x.id, name: x.name, color: x.color })), towers: this.ts.towers.map((t) => this.towerInfo(t)), snap: this.snapshot(true) };
+      players: [...this.players.values()].map((x) => ({ id: x.id, name: x.name, color: x.color })), towers: this.ts.towers.map((t) => this.towerInfo(t)), walls: this.ts.walls.map((w) => this.wallInfo(w)), snap: this.snapshot(true) };
   }
   rejoin(p, conn) { if (p.conn && p.conn !== conn) p.conn.close(4000); p.conn = conn; p.connected = true; p.discAt = null; this.events.push(['rc', p.id]); if (this.state === 'lobby') this.broadcastRoom(); else this.send(p, this.startMsg(p)); }
   // ---------- mỗi tick ----------
@@ -159,11 +161,12 @@ export class Room {
     if (p.dead || !p.connected) return { ok: false, message: 'Bạn đang bị hạ.' };
     const out = (r) => ({ ok: r.ok, reason: r.reason, message: r.message });
     switch (m.op) {
-      case 'build': {
+      case 'build': case 'wall': {
         if (!Number.isInteger(m.x) || !Number.isInteger(m.y)) return { ok: false, message: 'Tọa độ sai.' };
         for (const o of this.players.values()) if (!o.connected && !o.dead && o.x + o.r > m.x && o.x - o.r < m.x + 1 && o.y + o.r > m.y && o.y - o.r < m.y + 1) return { ok: false, reason: 'player', message: 'Có nhân vật đang đứng ở ô này.' };
-        return out(this.ts.build(m.x, m.y, this.targets()));
+        return out(m.op === 'wall' ? this.ts.buildWall(m.x, m.y, this.targets()) : this.ts.build(m.x, m.y, this.targets()));
       }
+      case 'sellwall': { const w = Number.isInteger(m.wid) ? this.ts.walls.find((x) => x.id === m.wid) : null; return w ? out(this.ts.sellWall(w)) : { ok: false, message: 'Tường không còn.' }; }
       case 'upgrade': { const t = this.tower(m); return t ? out(this.ts.upgrade(t)) : { ok: false, message: 'Tháp không còn.' }; }
       case 'pick': { const t = this.tower(m); return t ? out(this.ts.pickBranch(t, String(m.branch))) : { ok: false, message: 'Tháp không còn.' }; }
       case 'reset': { const t = this.tower(m); return t ? out(this.ts.resetPicks(t)) : { ok: false, message: 'Tháp không còn.' }; }

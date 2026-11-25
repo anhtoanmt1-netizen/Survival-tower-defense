@@ -4,7 +4,7 @@ import { TOWER_TYPES, BRANCHES } from '../config/towers.js';
 import { ECON } from '../config/economy.js';
 import { SKILLS, SPEED_UPGRADE } from '../config/skills.js';
 import { GAME_CONFIG } from '../config/gameConfig.js';
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2; // 2: thêm tường (lệnh wall/sellwall, sự kiện 'wl', trường walls trong 'start')
 export const MAX_PLAYERS = 8;
 export const TICK_RATE = 20;               // server mô phỏng + gửi snapshot 20 lần/giây
 export const RECONNECT_GRACE = 60;         // giây giữ chỗ người chơi mất kết nối

@@ -1,58 +1,38 @@
-// Nông dân cầm búa: pixel art vẽ bằng code. 6 animation: idle, walk, run, build, hurt, die. Màu áo tùy chỉnh.
-const FW = 32, FH = 44;
-const POSES = {
-  idle: [{ bob: 0 }, { bob: 1 }],
-  walk: [{ liftL: 0, liftR: 2, bob: 0 }, { liftL: 1, liftR: 1, bob: 1 }, { liftL: 2, liftR: 0, bob: 0 }, { liftL: 1, liftR: 1, bob: 1 }],
-  run: [{ liftL: 0, liftR: 3, bob: 0, lean: 1 }, { liftL: 2, liftR: 2, bob: 2, lean: 1 }, { liftL: 3, liftR: 0, bob: 0, lean: 1 }, { liftL: 2, liftR: 2, bob: 2, lean: 1 }],
-  build: [{ hammer: 0 }, { hammer: 1 }, { hammer: 2 }],
-  hurt: [{ hurt: true }],
-  die: [{ dead: 1 }, { dead: 2 }, { dead: 3 }],
-};
-export const FARMER_ANIMS = {
-  idle: { rate: 3, repeat: -1 }, walk: { rate: 8, repeat: -1 }, run: { rate: 12, repeat: -1 },
-  build: { rate: 7, repeat: -1 }, hurt: { rate: 6, repeat: 0 }, die: { rate: 5, repeat: 0 },
-};
-const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16); const m = (v) => Math.max(0, Math.min(255, Math.round(v * (1 + f)))); return `rgb(${m(n >> 16)},${m((n >> 8) & 255)},${m(n & 255)})`; };
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-
-function draw(c, ox, oy, p, shirt) {
-  const K = { skin: '#f2c79b', pants: '#5b4636', boot: '#2d2118', hat: '#e3b94f', hatD: '#b88a2a', hw: '#7a5230', hh: '#9aa3ad', belt: '#3b2a1c' };
-  const cx = ox + 16, base = oy + 42, sd = shade(shirt, -0.25);
-  if (p.dead) {
-    const y = base - (p.dead === 1 ? 14 : 9);
-    R(c, 'rgba(0,0,0,.3)', cx - 15, base - 3, 30, 4);
-    R(c, K.pants, cx - 15, y + 2, 9, 5); R(c, K.boot, cx - 17, y + 2, 3, 5);
-    R(c, shirt, cx - 6, y - 1, 12, 9); R(c, sd, cx - 6, y + 6, 12, 2);
-    R(c, K.skin, cx + 6, y, 8, 7); R(c, '#222', cx + 11, y + 2, 1, 1);
-    if (p.dead < 3) R(c, K.hat, cx + 5, y - 3, 9, 3); else R(c, K.hat, cx + 16, y + 4, 7, 3);
-    return;
+// NHÂN VẬT CHÍNH: sprite sheet thật từ Main.png (đã tách nền, 12 khung: 3 khung bước x 4 hướng) -> public/assets/player/main_sheet.png (tools/build_new_assets.py).
+// Hàng: 0 = xuống, 1 = trái, 2 = phải, 3 = lên. Mỗi hướng 3 khung: [0] bước chân A, [1] đứng yên, [2] bước chân B.
+// Chu kỳ chạy: đứng-A-đứng-B (1,0,1,2) nên không giật; mọi khung trong một hàng đã được căn CHUNG một điểm đặt chân (không trôi/nhấp nháy khi đổi khung).
+// Màu áo người chơi (cũng là màu trên minimap) = màu KHĂN QUÀNG (các điểm ảnh đỏ được đổi tông, giữ nguyên độ sáng/viền) -> mỗi màu một texture, tạo 1 lần.
+import { PLAYER_DISPLAY } from '../config/art.js';
+export const DIRS = ['down', 'left', 'right', 'up'];
+export const FARMER_ANIMS = { idle: { rate: 3 }, walk: { rate: 8 }, run: { rate: 10 } };
+const RUN = [1, 0, 1, 2];
+const hex = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+function rgb2hsv(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h * 60, mx ? d / mx : 0, mx]; }
+function hsv2rgb(h, s, v) { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return [f(5) * 255, f(3) * 255, f(1) * 255]; }
+// Đổi tông các điểm ảnh đỏ bão hòa (khăn quàng) sang màu người chơi. Da, tóc, nâu da thuộc, vàng mũ nằm ngoài dải này nên giữ nguyên.
+export function recolorScarf(data, shirt) {
+  const [th, ts, tv] = rgb2hsv(...hex(shirt)), sk = Math.min(1.15, Math.max(0.55, ts / 0.72));
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 8) continue; const [h, s, v] = rgb2hsv(data[i], data[i + 1], data[i + 2]);
+    if ((h <= 13 || h >= 345) && s > 0.55 && v > 0.42) { const o = hsv2rgb(th, Math.min(1, s * sk), Math.min(1, v * (0.55 + 0.6 * tv))); data[i] = o[0]; data[i + 1] = o[1]; data[i + 2] = o[2]; }
   }
-  const b = p.bob || 0, X = cx + (p.lean || 0), lL = p.liftL || 0, lR = p.liftR || 0;
-  R(c, 'rgba(0,0,0,.3)', cx - 8, base - 2, 16, 4);
-  R(c, K.pants, cx - 5, base - 10, 4, 8 - lL); R(c, K.boot, cx - 5, base - 2 - lL, 4, 2);
-  R(c, K.pants, cx + 1, base - 10, 4, 8 - lR); R(c, K.boot, cx + 1, base - 2 - lR, 4, 2);
-  R(c, shirt, X - 6, base - 22 - b, 12, 12); R(c, sd, X - 6, base - 13 - b, 12, 1); R(c, K.belt, X - 6, base - 11 - b, 12, 2);
-  R(c, shirt, X - 9, base - 21 - b, 3, 7); R(c, K.skin, X - 9, base - 14 - b, 3, 2);
-  const h = p.hammer;
-  if (h === 0) { R(c, shirt, X + 6, base - 28 - b, 3, 7); R(c, K.skin, X + 6, base - 30 - b, 3, 2); R(c, K.hw, X + 7, base - 40, 2, 11); R(c, K.hh, X + 4, base - 42, 8, 4); }
-  else if (h === 1) { R(c, shirt, X + 6, base - 22 - b, 3, 5); R(c, K.skin, X + 8, base - 19 - b, 2, 2); R(c, K.hw, X + 8, base - 19, 8, 2); R(c, K.hh, X + 15, base - 23, 4, 8); }
-  else if (h === 2) { R(c, shirt, X + 6, base - 20 - b, 3, 6); R(c, K.skin, X + 7, base - 14 - b, 3, 2); R(c, K.hw, X + 11, base - 22, 2, 14); R(c, K.hh, X + 9, base - 10, 6, 4); }
-  else { R(c, shirt, X + 6, base - 21 - b, 3, 7); R(c, K.skin, X + 6, base - 14 - b, 3, 2); R(c, K.hw, X + 9, base - 16, 2, 10); R(c, K.hh, X + 8, base - 8, 5, 3); }
-  R(c, K.skin, X - 4, base - 30 - b, 8, 8); R(c, '#222', X - 2, base - 27 - b, 1, 2); R(c, '#222', X + 1, base - 27 - b, 1, 2);
-  R(c, K.hatD, X - 7, base - 31 - b, 14, 2); R(c, K.hat, X - 4, base - 34 - b, 8, 3);
-  if (p.hurt) { c.globalCompositeOperation = 'source-atop'; R(c, 'rgba(255,60,60,.55)', ox, oy, FW, FH); c.globalCompositeOperation = 'source-over'; }
 }
-
-// Tạo texture + animation cho một màu áo. Trả về key texture; animation key: `${key}:${tên}`
+// Tạo texture + animation cho một màu áo. Trả về key; animation key: `${key}:${idle|walk|run}_${hướng}`; khung: `${hướng}_${0..2}`
 export function ensureFarmer(scene, shirt) {
-  const key = 'farmer_' + shirt.slice(1);
-  if (scene.textures.exists(key)) return key;
-  const all = Object.entries(POSES).flatMap(([anim, list]) => list.map((p, i) => ({ anim, i, p })));
-  const tex = scene.textures.createCanvas(key, FW * all.length, FH); const c = tex.getContext(); c.imageSmoothingEnabled = false;
-  all.forEach(({ anim, i, p }, n) => { draw(c, n * FW, 0, p, shirt); tex.add(`${anim}_${i}`, 0, n * FW, 0, FW, FH); });
-  tex.refresh();
-  for (const [anim, list] of Object.entries(POSES))
-    scene.anims.create({ key: `${key}:${anim}`, frames: list.map((_, i) => ({ key, frame: `${anim}_${i}` })), frameRate: FARMER_ANIMS[anim].rate, repeat: FARMER_ANIMS[anim].repeat });
+  const key = 'farmer_' + shirt.slice(1); if (scene.textures.exists(key)) return key;
+  const src = scene.textures.get('main_sheet').getSourceImage(), [CW, CH] = PLAYER_DISPLAY.cell;
+  const tex = scene.textures.createCanvas(key, src.width, src.height), c = tex.getContext(); c.drawImage(src, 0, 0);
+  const img = c.getImageData(0, 0, src.width, src.height); recolorScarf(img.data, shirt); c.putImageData(img, 0, 0); tex.refresh();
+  tex.setFilter(0); // 0 = Phaser FilterMode.LINEAR: hình hạ mẫu từ ảnh gốc, lọc tuyến tính cho mượt (không răng cưa khi thu nhỏ)
+  DIRS.forEach((d, r) => { for (let i = 0; i < 3; i++) tex.add(`${d}_${i}`, 0, i * CW, r * CH, CW, CH); });
+  const A = (k, frames, rate) => scene.anims.create({ key: `${key}:${k}`, frames: frames.map((i) => ({ key, frame: i })), frameRate: rate, repeat: -1 });
+  for (const d of DIRS) { A(`idle_${d}`, [`${d}_1`], 1); A(`walk_${d}`, RUN.map((i) => `${d}_${i}`), FARMER_ANIMS.walk.rate); A(`run_${d}`, RUN.map((i) => `${d}_${i}`), FARMER_ANIMS.run.rate); }
   return key;
 }
-export const FARMER_ORIGIN_Y = 42 / FH;
+export const FARMER_ORIGIN_Y = PLAYER_DISPLAY.originY;
+// Hướng nhìn từ vector chuyển động; `cur` giữ nguyên khi hai trục gần bằng nhau (chống đổi hướng qua lại khi đi chéo)
+export function dirFrom(vx, vy, cur = 'down') {
+  const ax = Math.abs(vx), ay = Math.abs(vy); if (ax < 1e-3 && ay < 1e-3) return cur;
+  const horiz = cur === 'left' || cur === 'right', favourH = horiz ? ax * 1.2 >= ay : ax > ay * 1.2;
+  return favourH ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down');
+}

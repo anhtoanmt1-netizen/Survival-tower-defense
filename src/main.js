@@ -4,6 +4,7 @@ import { GAME_CONFIG } from './config/gameConfig.js';
 import { FONT_FILES } from './config/ui.js';
 import { settings } from './config/settings.js';
 import { DIFFICULTY_LIST, DIFF_ICON, getDifficulty } from './config/difficulty.js';
+import { isUnlocked, requirementOf, recordResult } from './config/progress.js';
 import { newRandomMapId, parseMapId } from './map/index.js';
 import { TERRAIN_THEMES, TERRAIN_THEME_CODES } from './map/terrain/themes.js';
 import { GameScene } from './scenes/GameScene.js';
@@ -31,10 +32,11 @@ GAME_CONFIG.shirtColors.forEach((c) => { const b = document.createElement('butto
 const paintSwatches = () => [...sw.children].forEach((b) => b.classList.toggle('sel', b.dataset.c === settings.data.shirt));
 // chọn độ khó
 const dg = $('diffs');
-DIFFICULTY_LIST.forEach((d) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'diff'; b.dataset.id = d.id; b.style.setProperty('--c', d.color); b.innerHTML = `<span class="dic">${iconSvg(DIFF_ICON[d.id])}</span><span>${d.name}</span>`; b.onclick = () => { settings.set({ difficulty: d.id }); paintDiff(); }; dg.appendChild(b); });
+DIFFICULTY_LIST.forEach((d) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'diff'; b.dataset.id = d.id; b.style.setProperty('--c', d.color); b.innerHTML = `<span class="dic">${iconSvg(DIFF_ICON[d.id])}</span><span>${d.name}</span><span class="dlock">${iconSvg('lock')}</span>`; b.onclick = () => { if (!isUnlocked(d.id, settings.data.cleared)) { lockedHint(d); return; } settings.set({ difficulty: d.id }); paintDiff(); }; dg.appendChild(b); });
 const f1 = (n) => String(n).replace('.', ',');
+function lockedHint(d) { const r = getDifficulty(requirementOf(d.id)); $('diffdesc').style.setProperty('--c', d.color); $('diffdesc').innerHTML = `<b>🔒 ${d.name} đang khóa</b>: hãy thắng độ khó <b>${r.name}</b> (sống sót đủ 100 đợt) để mở khóa.`; }
 function paintDiff() {
-  const d = getDifficulty(settings.data.difficulty); [...dg.children].forEach((b) => b.classList.toggle('sel', b.dataset.id === d.id));
+  const d = getDifficulty(settings.data.difficulty); [...dg.children].forEach((b) => { const lk = !isUnlocked(b.dataset.id, settings.data.cleared); b.classList.toggle('sel', b.dataset.id === d.id); b.classList.toggle('locked', lk); b.setAttribute('aria-disabled', String(lk)); b.title = lk ? 'Chưa mở khóa – thắng cấp trước để mở' : ''; });
   const el = $('diffdesc'); el.style.setProperty('--c', d.color);
   el.innerHTML = `<b>Cấp ${d.level}/5 – ${d.name} (${d.en})</b>: ${d.blurb}<br><small>Máu quái ×${f1(d.hpMul)} · Số lượng ×${f1(d.countMul)} · Tháp ${d.buildCost} vàng · Thưởng ${Math.round(d.rewardMul * 100)}% · Chạm = −${d.contactDamage} tim</small>`;
   showBest();
@@ -66,6 +68,7 @@ function copy(text) {
 async function loadFonts() { try { await Promise.all(FONT_FILES.map((w) => document.fonts.load(`${w} 14px Montserrat`, 'ĐợtẢạ Tiếng Việt ăâêôơư 0123456789'))); } catch { /* dùng font dự phòng */ } }
 const runInfo = (id) => { const p = parseMapId(id), t = TERRAIN_THEMES[p.theme]; return `${t ? t.vi + ' – ' + t.name : p.theme} · ${p.size}×${p.size}`; };
 async function start() {
+  if (!isUnlocked(settings.data.difficulty, settings.data.cleared)) { settings.set({ difficulty: 'easy' }); paintDiff(); } // chặn bắt đầu cấp đang khóa
   const t = typedId(); if (t.error) { $('err').textContent = t.error; return; } const id = t.id; $('err').textContent = '';
   const btn = $('start'); btn.classList.add('busy');
   const name = ($('name').value.trim() || 'Nông dân').slice(0, GAME_CONFIG.player.maxNameLength); settings.set({ name, lastMapId: id });
@@ -83,9 +86,9 @@ async function start() {
 }
 const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 function onEnd(st) {
-  const d = getDifficulty(st.difficulty), prev = settings.data.bestWaves[d.id] || (d.id === 'easy' ? settings.data.bestWave : 0), best = Math.max(prev, st.wave); settings.set({ bestWaves: { [d.id]: best } });
+  const d = getDifficulty(st.difficulty), prev = settings.data.bestWaves[d.id] || (d.id === 'easy' ? settings.data.bestWave : 0), best = Math.max(prev, st.wave), cleared = recordResult(settings.data.cleared, d.id, st.won), nextUnlocked = st.won && !settings.data.cleared[d.id]; settings.set({ bestWaves: { [d.id]: best }, cleared }); paintDiff();
   const ico = $('endico'); ico.classList.toggle('lose', !st.won); ico.dataset.icon = st.won ? 'trophy' : 'skull'; hydrateIcons($('endmodal'));
-  $('endtitle').textContent = st.won ? 'CHIẾN THẮNG!' : 'THẤT BẠI'; $('endsub').textContent = (st.won ? `Bạn đã sống sót qua 100 đợt ở độ khó ${d.name}.` : `Bạn gục ngã ở đợt ${st.wave} (${d.name}).`) + (st.wave > prev ? ' Kỷ lục mới!' : ` Kỷ lục: đợt ${best}.`);
+  $('endtitle').textContent = st.won ? 'CHIẾN THẮNG!' : 'THẤT BẠI'; $('endsub').textContent = (st.won ? `Bạn đã sống sót qua 100 đợt ở độ khó ${d.name}.` : `Bạn gục ngã ở đợt ${st.wave} (${d.name}).`) + (st.wave > prev ? ' Kỷ lục mới!' : ` Kỷ lục: đợt ${best}.`) + (nextUnlocked && d.level < 5 ? ' Đã mở khóa độ khó tiếp theo!' : '');
   $('endstats').innerHTML = [['Độ khó', d.name], ['Slime đã diệt', st.kills], ['Vàng kiếm được', st.gold], ['Số tháp đã xây', st.towers], ['Sát thương gây ra', st.damage.toLocaleString('vi-VN')], ['Thời gian sống sót', mmss(st.time)], ['Mã bản đồ', st.mapId]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
   $('endmodal').hidden = false;
 }

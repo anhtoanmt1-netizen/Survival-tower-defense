@@ -7,16 +7,18 @@ import { isBuildableTerrain } from '../map/tiles.js';
 export const MSG = {
   blocked: 'KHÔNG THỂ XÂY THÁP - ĐƯỜNG DI CHUYỂN CỦA QUÁI VẬT BỊ CHẶN.',
   terrain: 'Không thể xây ở ô này.', bounds: 'Ngoài bản đồ.', occupied: 'Ô này đã có tháp.', player: 'Có nhân vật đang đứng ở ô này.',
-  gold: 'Không đủ vàng.', noPlayers: 'Không có người chơi còn sống.',
+  gold: 'Không đủ vàng.', gone: 'Công trình không còn.', noPlayers: 'Không có người chơi còn sống.',
 };
 const fail = (reason, message) => ({ ok: false, reason, message: message || MSG[reason] });
 // Hệ thống tháp thuần (không phụ thuộc Phaser): xây, nâng cấp, nhánh kỹ năng, bán, nhắm bắn, mũi tên.
 export class TowerSystem {
   constructor({ grid, world, economy, gates, hooks = {}, rng = Math.random, diff = NEUTRAL }) {
-    Object.assign(this, { grid, world, economy, gates, hooks, rng, diff }); this.mods = { damage: diff.towerDamageMul, fireRate: diff.towerRateMul }; this.buildTime = ECON.buildTime; this.towers = []; this.projectiles = []; this.pool = []; this.nextId = 1;
-    this.scratch = new FlowField(grid.width, grid.height); this.stats = { built: 0, damage: 0, refunded: 0 };
+    Object.assign(this, { grid, world, economy, gates, hooks, rng, diff }); this.mods = { damage: diff.towerDamageMul, fireRate: diff.towerRateMul }; this.buildTime = ECON.buildTime; this.towers = []; this.walls = []; this.projectiles = []; this.pool = []; this.nextId = 1; this.nextWallId = 1;
+    this.scratch = new FlowField(grid.width, grid.height); this.stats = { built: 0, walls: 0, damage: 0, refunded: 0 };
   }
   buildCost() { return this.diff.buildCost; } // giá cố định, không đổi theo số tháp hay thời gian
+  wallCost() { return ECON.wallCost; } // giá tường cố định 5 vàng/ô ở mọi độ khó
+  wallAt(x, y) { return this.walls.find((w) => w.x === x && w.y === y) || null; }
   towerAt(x, y) { return this.towers.find((t) => t.x === x && t.y === y) || null; }
   // Ô x,y có chặn hết đường từ MỌI cổng đang hoạt động tới người chơi còn sống không? Cùng FlowField + isWalkable với AI quái vật.
   pathsOkWith(x, y, players) {
@@ -33,15 +35,17 @@ export class TowerSystem {
       return true;
     } finally { g.extra[i] = prev; }
   }
-  checkPlacement(x, y, players, { ignoreGold = false } = {}) {
+  // kind: 'tower' | 'wall'. Cùng một bộ quy tắc (địa hình, ô trống, không có người đứng, KHÔNG chặn kín đường tới người chơi); chỉ khác giá.
+  checkPlacement(x, y, players, { ignoreGold = false, kind = 'tower' } = {}) {
+    const cost = kind === 'wall' ? this.wallCost() : this.buildCost();
     const g = this.grid;
     if (!g.inBounds(x, y)) return fail('bounds');
     if (this.towerAt(x, y) || g.extra[y * g.width + x]) return fail('occupied');
     if (!isBuildableTerrain(g.tile(x, y))) return fail('terrain');
     for (const p of players) if (!p.dead) { const r = p.r ?? 0.3; if (p.x + r > x && p.x - r < x + 1 && p.y + r > y && p.y - r < y + 1) return fail('player'); }
     if (!this.pathsOkWith(x, y, players)) return fail('blocked');
-    if (!ignoreGold && this.economy.gold < this.buildCost()) return fail('gold', `Không đủ vàng (cần ${this.buildCost()}).`);
-    return { ok: true, cost: this.buildCost() };
+    if (!ignoreGold && this.economy.gold < cost) return fail('gold', `Không đủ vàng (cần ${cost}).`);
+    return { ok: true, cost };
   }
   build(x, y, players, type = 'archer') {
     const c = this.checkPlacement(x, y, players); if (!c.ok) return c;
@@ -49,6 +53,18 @@ export class TowerSystem {
     const t = { id: this.nextId++, type, x, y, level: 1, stage: 0, picks: [], invested: c.cost, state: 'building', buildT: this.buildTime, cd: 0, angle: 0, kills: 0 };
     this.refresh(t); this.towers.push(t); this.grid.setBlocked(x, y, true); this.stats.built++; this.hooks.onBuildStart?.(t);
     return { ok: true, tower: t };
+  }
+  // --- TƯỜNG: 1 ô, xây tức thì, chặn quái vật như tháp (grid.extra => FlowField + va chạm quái/người chơi dùng chung). Kỹ năng Xuyên vật thể bỏ qua grid nên không bị ảnh hưởng. ---
+  buildWall(x, y, players) {
+    const c = this.checkPlacement(x, y, players, { kind: 'wall' }); if (!c.ok) return c;
+    if (!this.economy.spend(c.cost)) return fail('gold');
+    const w = { id: this.nextWallId++, x, y }; this.walls.push(w); this.grid.setBlocked(x, y, true); this.stats.walls++; this.hooks.onWallBuilt?.(w);
+    return { ok: true, wall: w };
+  }
+  wallRefund() { return Math.floor(ECON.wallCost * this.diff.sellRefund); }
+  sellWall(w) {
+    const i = this.walls.indexOf(w); if (i < 0) return fail('gone');
+    const v = this.wallRefund(); this.walls.splice(i, 1); this.grid.setBlocked(w.x, w.y, false); this.economy.add(v); this.stats.refunded += v; this.hooks.onWallSold?.(w); return { ok: true, refund: v };
   }
   refresh(t) { t.stats = computeStats(t.type, t.level, t.picks, this.mods); t.pending = pendingPicks(t.type, t.level, t.picks); }
   upgradeInfo(t) {

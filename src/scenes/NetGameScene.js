@@ -8,9 +8,11 @@ import { Player } from '../entities/Player.js';
 import { RemotePlayer } from '../entities/RemotePlayer.js';
 import { MonsterRenderer } from '../systems/MonsterRenderer.js';
 import { TowerRenderer } from '../systems/TowerRenderer.js';
+import { WallRenderer } from '../systems/WallRenderer.js';
 import { Effects } from '../systems/Effects.js';
 import { Panels } from '../ui/panels.js';
 import { MirrorSkills } from '../net/mirror.js';
+import { audio } from '../systems/Audio.js';
 import { GameScene } from './GameScene.js';
 const TS = GAME_CONFIG.tileSize, KIND_COLOR = { arrow: 0xffffff, ice: 0x8fd0ff, fire: 0xff8a2a };
 // Chế độ nhiều người: KHÔNG mô phỏng gì cục bộ. Hiển thị trạng thái do server gửi (qua Mirror) và gửi lệnh lên server.
@@ -23,6 +25,7 @@ export class NetGameScene extends GameScene {
     this.fx = new Effects(this); this.renderer = new MonsterRenderer(this, this.fx);
     this.world = mir.world; this.director = mir.director; this.economy = mir.economy; this.ts = mir.ts; this.activeGates = mir.activeGates;
     this.towerView = new TowerRenderer(this, this.ts, this.fx);
+    this.wallView = new WallRenderer(this, this.ts, this.fx); this.wallArm = null;
     const me = mir.me; this.player = new Player(this, this.grid, me.tx, me.ty, { name: me.name, shirt: me.color }); this.player.skills = new MirrorSkills(me);
     this.remotes = new Map(); for (const p of mir.players.values()) if (p.id !== mir.you) this.remotes.set(p.id, new RemotePlayer(this, p));
     for (const g of this.activeGates) { const o = this.add.ellipse(g.x * TS + 16, g.y * TS + 22, 64, 40, 0x8e44ff, 0.35).setStrokeStyle(2, 0xd2a8ff).setDepth(1); this.tweens.add({ targets: o, scale: 1.15, alpha: 0.6, yoyo: true, repeat: -1, duration: 700 }); }
@@ -36,6 +39,7 @@ export class NetGameScene extends GameScene {
     this.events.once('shutdown', () => this.panels.destroy()); this.events.once('destroy', () => this.panels.destroy());
     S.sh = {
       onFree: (m) => this.renderer.release(m), onProjFree: (p) => this.towerView.releaseArrow(p), onTowerRemoved: (t) => { if (this.selected === t) this.select(null); },
+      onWallAdded: () => audio.play('build_done'), onWallRemoved: () => { audio.play('sell'); },
       onHurt: (p) => { if (p.id === mir.you) { this.player.hurt(); this.player.invuln = GAME_CONFIG.player.invulnTime; this.cameras.main.shake(120, 0.004); } },
       onEvent: (ev) => this.onNetEvent(ev),
     };
@@ -51,6 +55,17 @@ export class NetGameScene extends GameScene {
   }
   cmd(op, args, cb) { this.session.c.cmd(op, args, (r) => { if (!r.ok && r.message) this.panels.toast(r.message); cb?.(r); }); }
   requestBuild(x, y) { this.cmd('build', { x, y }); }
+  // Nhiều người: server quyết định. Thả tháp/tường => gửi lệnh; kết quả (hoặc lỗi) về qua 'res', đối tượng mới xuất hiện qua sự kiện 'tw'/'wl'.
+  endPlacement(p) {
+    const pl = this.placing; if (!pl || p.id !== pl.id) return;
+    this.placing = null; this.ghost.setVisible(false); this.ghostG.clear();
+    if (this.scene.get('UI').isUiPointer(p) || !pl.tile) return;
+    this.cmd(pl.kind === 'wall' ? 'wall' : 'build', { x: pl.tile.x, y: pl.tile.y });
+  }
+  tapWall(w) {
+    if (this.wallArm === w.id) { const x = w.x * TS + 16, y = w.y * TS - 6; this.disarmWall(); this.cmd('sellwall', { wid: w.id }, (r) => { if (r.ok) this.fx.float(x, y, '+' + this.ts.wallRefund(), '#ffd24a'); }); return; }
+    this.wallArm = w.id; this.wallView.arm(w); this.panels.toast(`Chạm tường lần nữa để phá (hoàn ${this.ts.wallRefund()} vàng).`); this.wallTimer?.remove(); this.wallTimer = this.time.delayedCall(2500, () => this.disarmWall());
+  }
   useSkill(name) {
     if (this.player.dead) return; const k = this.player.skills;
     if (!k.can(name)) { const cd = Math.ceil(k.remainingCd(name)); return this.panels.toast(`${SKILLS[name].name} đang hồi chiêu: ${Math.floor(cd / 60)}:${String(cd % 60).padStart(2, '0')}`); }
@@ -93,7 +108,7 @@ export class NetGameScene extends GameScene {
       if (key !== this.lastSent) { this.lastSent = key; this.session.c.send({ t: 'mv', x, y, f: pl.facingLeft ? 1 : 0 }); }
     }
     mir.smooth(dt); for (const r of this.remotes.values()) r.update();
-    this.fx.update(dt); this.renderer.sync(this.world.monsters); this.towerView.sync(dt, this.selected);
+    this.fx.update(dt); this.renderer.sync(this.world.monsters); this.towerView.sync(dt, this.selected); this.wallView.sync(dt);
     this.refT += dt; if (this.refT > 0.4) { this.refT = 0; this.panels.refresh(); }
   }
 }

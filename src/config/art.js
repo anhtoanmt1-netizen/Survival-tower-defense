@@ -6,12 +6,22 @@ export const TREE_ZONES = [
   { name: 'oak', species: [4, 4, 4, 5, 1] }, { name: 'pine', species: [8, 8, 8, 4, 7] }, { name: 'orchard', species: [5, 5, 4, 2, 3] },
   { name: 'blossom', species: [2, 2, 3, 4, 1] }, { name: 'autumn', species: [0, 0, 0, 4, 7] }, { name: 'bamboo', species: [6, 6, 6, 4, 1] },
 ];
-export const TOWER_DISPLAY = { texScale: 0.5, shadowY: 4 };                // 6 hình: 0 (LV1-4), 1 (LV5), 2 (LV7), 3 (LV9), 4 (LV12), 5 (LV15)
+// Tháp: chiều rộng hiển thị (px thế giới) theo từng hình tiến hóa. 1 ô = 32px => tháp ~33px: hai tháp liền kề KHÔNG chồng lên nhau (hình LV15 có thêm vòng sáng nên rộng hơn một chút).
+export const TOWER_DISPLAY = { widths: [33, 33, 33, 34, 34, 36], shadowY: 4 };
+export const WALL_DISPLAY = { width: 35 };   // tường 1 ô: rộng ~1 ô, các ô tường kề nhau nối liền (xếp theo Y)
+export const PLAYER_DISPLAY = { scale: 0.36, originY: 128 / 136, cell: [96, 136] }; // main_sheet.png: 3 cột x 4 hàng (xuống/trái/phải/lên), chân ở y=128
+// Vị trí ĐUỐC trên từng hình tháp (Tower.png) – [x, y, cỡ] với x,y là tỉ lệ 0..1 trên ảnh, y = gốc ngọn lửa. Hình LV1-LV7(0,1) không có đuốc. Hình 5 là lửa xanh.
+export const TOWER_FLAMES = {
+  2: [[0.1752, 0.6403, 1], [0.6442, 0.651, 1], [0.8221, 0.636, 0.5]], 3: [[0.191, 0.6515, 1], [0.6558, 0.661, 1], [0.8166, 0.6648, 0.5]],
+  4: [[0.1883, 0.6509, 1], [0.665, 0.6566, 1], [0.824, 0.6509, 0.55]], 5: [[0.1739, 0.7217, 0.9], [0.7094, 0.744, 0.9], [0.8238, 0.7217, 0.7]],
+};
+export const TOWER_FLAME_BLUE = 5;                // 6 hình: 0 (LV1-4), 1 (LV5), 2 (LV7), 3 (LV9), 4 (LV12), 5 (LV15)
 export const TOWER_STAGE_LEVELS = [5, 7, 9, 12, 15];
 export const towerStage = (level) => TOWER_STAGE_LEVELS.filter((l) => level >= l).length;
 export function assetManifest() {
   const img = [];
   for (let i = 0; i < 9; i++) img.push([`tree_${i}`, `trees/tree_${i}.png`]);
   for (let i = 0; i < 6; i++) img.push([`tower_${i}`, `towers/tower_${i}.png`]);
+  img.push(['wall', 'wall/wall.png'], ['main_sheet', 'player/main_sheet.png']);
   return img;
 }

@@ -1,7 +1,7 @@
 // Thông số hình ảnh/hiệu ứng môi trường tập trung: kích thước cây, bóng đổ, hiệu ứng nước/cỏ, khoảng chỉnh màu. Sửa tại đây, không rải trong code.
 export const VISUAL = {
-  tree: { footprint: 2, displayW: 112, legacyW: 52, texW: 336, baseOffset: 3 },         // cây 2x2 ô: rộng 112px thế giới (ô = 32px); bản đồ cũ (1 ô) giữ 52px
-  shadow: { tree: [74, 24, 0.3], rock: [46, 14, 0.26], bush: [30, 10, 0.22], tower: [54, 18, 0.34] },   // [rộng, cao, độ đậm] bóng tiếp đất
+  tree: { footprint: 2, displayW: 112, legacyW: 52, texW: 504, baseOffset: 3 },         // cây 2x2 ô: rộng 112px thế giới (ô = 32px); bản đồ cũ (1 ô) giữ 52px
+  shadow: { tree: [74, 24, 0.3], rock: [46, 14, 0.26], bush: [30, 10, 0.22], tower: [44, 15, 0.36] },   // [rộng, cao, độ đậm] bóng tiếp đất
   water: { max: 34, perSecond: 16, glintLife: 1.0, rippleLife: 1.9, tries: 10 },        // tia phản chiếu + gợn sóng (sprite có giới hạn số lượng)
   grass: { maxTufts: 420, wind: 0.1, gust: 0.035, bendRadius: 22, bendMax: 0.75, density: 1.0, cellsMax: 1800 },
   // Lá/cánh hoa rơi theo từng loài cây (chỉ số = tree_<i>): màu, tần suất, tốc độ rơi/trôi ngang, độ đung đưa, cỡ, xoay

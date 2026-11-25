@@ -1,4 +1,5 @@
 import { DEFAULT_DIFFICULTY, DIFFICULTIES } from './difficulty.js';
+import { isUnlocked, sanitizeCleared } from './progress.js';
 import { TERRAIN_THEME_CODES } from '../map/terrain/themes.js';
 import { clampGrade, GRADE_DEFAULT } from '../render/mapGrade.js';
 // Cài đặt người dùng (lưu localStorage, một nơi duy nhất). Đọc: settings.data; ghi: settings.set({...}); lắng nghe: settings.on(fn).
@@ -7,7 +8,7 @@ export const VIEW_PRESETS = { near: 9, far: 13, wide: 18 };     // số ô nhìn
 export const VIEW_RANGE = { min: 7, max: 26, step: 0.5 };
 export const RATIOS = { '19.5:9': 19.5 / 9, '16:9': 16 / 9, full: 0 };
 export const DEFAULTS = {
-  name: 'Nông dân', shirt: null, lastMapId: '', bestWave: 0, bestWaves: {}, difficulty: DEFAULT_DIFFICULTY, mapTheme: 'random', mapSize: 100,
+  name: 'Nông dân', shirt: null, lastMapId: '', bestWave: 0, bestWaves: {}, cleared: {}, difficulty: DEFAULT_DIFFICULTY, mapTheme: 'random', mapSize: 100,
   audio: { music: true, sfx: true, musicVol: 0.6, sfxVol: 0.85 },
   display: { orientation: 'portrait', ratio: 'full', view: VIEW_PRESETS.near },
   gameplay: { autoPause: true },                    // tự tạm dừng khi mở bảng nâng cấp tháp / chọn nhánh kỹ năng
@@ -22,7 +23,8 @@ function sanitize(o) {
   if (!(o.display.ratio in RATIOS)) o.display.ratio = 'full';
   o.display.view = clamp(+o.display.view || VIEW_PRESETS.near, VIEW_RANGE.min, VIEW_RANGE.max);
   o.gameplay.autoPause = !!o.gameplay.autoPause; o.fx.water = !!o.fx.water; o.fx.grass = !!o.fx.grass; Object.assign(o.grade, clampGrade(o.grade));
-  if (!DIFFICULTIES[o.difficulty]) o.difficulty = DEFAULT_DIFFICULTY;
+  o.cleared = sanitizeCleared(o.cleared);
+  if (!DIFFICULTIES[o.difficulty] || !isUnlocked(o.difficulty, o.cleared)) o.difficulty = DEFAULT_DIFFICULTY; // không thể giữ cấp đang khóa
   if (![100, 150, 200].includes(+o.mapSize)) o.mapSize = 100; o.mapSize = +o.mapSize; if (o.mapTheme !== 'random' && !TERRAIN_THEME_CODES.includes(o.mapTheme)) o.mapTheme = 'random';
   return o;
 }
