@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Dựng ảnh cây (Tree.png) và tháp (Tower.png) cho game:  python3 tools/build_object_assets.py <Tree.png> <Tower.png>
-- Cây: xuất ảnh RỘNG 336px (hiển thị 112px thế giới = 2x2 ô; bản đồ cũ 52px) -> sắc nét, không nhòe.
+- Cây: xuất ảnh RỘNG 504px (hiển thị 112px thế giới = 2x2 ô; bản đồ cũ 52px) -> sắc nét, không nhòe.
 - Làm mờ viền PHẦN ĐẾ (tấm đất hình thoi) bằng mặt nạ elip: cây/tháp 'mọc' từ mặt đất thay vì đặt trên một tấm nền rời. Thân/rễ giữ nguyên.
 - Chỉnh màu dịu cùng chuẩn với địa hình (giảm bão hòa nhẹ, phủ sương)."""
 import sys, numpy as np
@@ -23,7 +23,7 @@ def components(path, dil):
         c = A[s].copy(); c[lab[s] != lb, 3] = 0; ys, xs = np.where(c[..., 3] > 40); out.append(c[ys.min():ys.max() + 1, xs.min():xs.max() + 1])
     return out
 def main(tree, tower):
-    F = 336 / 700
+    F = 504 / 700
     for k, c in enumerate(components(tree, 9)):
         c[..., :3] = grade(c[..., :3]); c = feather_base(c, cyp=int(30 / F), rx=int(58 / F), ryu=int(52 / F), ryl=int(24 / F), y0p=int(84 / F)); im = Image.fromarray(c); im = im.resize((round(im.width * F), round(im.height * F)), Image.LANCZOS)
         im.save(f'public/assets/trees/tree_{k}.png'); print('tree', k, im.size)

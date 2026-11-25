@@ -130,3 +130,10 @@ src/scenes/    GameScene (thế giới), UIScene (joystick, minimap)
 tests/         kiểm thử tự động
 ```
 Thêm chủ đề mới: tạo `config/themes/<ten>.js`, đăng ký trong `themes/index.js` và `map/generators/index.js`.
+
+## Nâng cấp v0.8 (tường, mở khóa cấp, Build UI, tài nguyên mới)
+- **Tường** (`Wall.png`): 1 ô, 5 vàng, chặn đường quái (FlowField + va chạm); kỹ năng Xuyên vật thể vẫn đi qua; chạm 2 lần để phá. Chạy cả chế độ nhiều người (lệnh `wall`/`sellwall`, sự kiện `wl`, `PROTOCOL_VERSION = 2`).
+- **Mở khóa cấp độ**: `config/progress.js` — phải thắng tuần tự; cấp khóa bị làm mờ + ổ khóa, không chọn/bắt đầu được.
+- **Build UI**: thẻ icon Tháp / Tường, hoạt ảnh mở/đóng.
+- **Minimap** dùng cùng bộ ghép địa hình với bản xem trước (cổng, tường, tháp cùng phong cách).
+- **Tài nguyên** dựng lại bằng `tools/build_new_assets.py` (nhân vật 12 khung, tháp + đuốc, tường) và `tools/build_object_assets.py` (cây 504px) ở độ phân giải cao hơn để không bị mờ.
