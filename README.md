@@ -143,3 +143,31 @@ Thêm chủ đề mới: tạo `config/themes/<ten>.js`, đăng ký trong `theme
 - **Tháp và Tường chiếm 2x2 ô** (`ECON.footprint`): (x,y) = ô trên-trái; chặn/giải phóng cả 4 ô, kiểm tra địa hình/ranh giới/nhân vật/đường đi cho cả khối, bắn từ tâm khối. Giá giữ nguyên: tháp 60, tường 5 vàng / công trình. `PROTOCOL_VERSION = 3`.
 - **Menu**: sửa lỗi cắt mất phần trên của Preview Map (căn giữa bằng `align-items:center` làm phần đầu không cuộn tới được) → căn giữa an toàn bằng `margin:auto`, áp dụng cho menu chính và các hộp thoại.
 - **Nút Camera** cạnh minimap (cùng kích thước/kiểu nút Cài đặt): chạm để đổi tầm nhìn Gần → Xa → Rộng, dùng chung giá trị với mục "Tầm nhìn camera" trong Cài đặt.
+
+## Nâng cấp v1.0 – hiệu năng, PWA, Lướt, tốc độ game
+
+### Chế độ hiệu năng (Cài đặt → Hiệu năng)
+| Chế độ | Dành cho | Khác biệt (chỉ phần trình bày) |
+|---|---|---|
+| Tiết kiệm | máy yếu, muốn mát/pin | trần 30 FPS, hiệu ứng phụ thưa nhịp, ít hạt/bụi/cỏ hơn |
+| Cân bằng (mặc định) | đa số máy | 60 FPS, hiệu ứng đầy đủ vừa phải |
+| Cao cấp | máy mạnh | không giới hạn FPS, nhiều hiệu ứng nhất |
+
+Lối chơi (tốc độ, sát thương, spawn, cân bằng) **giống hệt** ở cả 3 chế độ. Lần đầu mở game, chế độ được đề xuất theo số nhân CPU/RAM/loại thiết bị (`src/config/performance.js → recommendMode`); người chơi đổi tay thì được giữ lại. "Tự điều chỉnh theo FPS" (`PerfGovernor`) chỉ tạm thưa bớt hiệu ứng phụ khi FPS tụt kéo dài. Game tự dừng khi ẩn tab/ứng dụng. Giới hạn FPS dùng `fps.limit` của Phaser, và đổi lúc chạy qua `loop.fpsLimit` (nếu bản Phaser không cho thì có hiệu lực từ ván sau).
+
+### Tính năng mới
+- **Âm thanh 4 nhóm** (Nhạc & môi trường / Tháp / Quái / Nhân vật): mỗi nhóm có thanh kéo + nút tắt riêng, lưu trong `std.settings.v1` (cài đặt `sfx` cũ được tự chuyển).
+- **Bước chân** đồng bộ nhịp chạy thật, kèm bụi nhẹ theo bước (số hạt theo chế độ hiệu năng); **tóc** lay theo gió, đuôi tóc theo chuyển động và quán tính khi dừng.
+- **Lướt (Dash)**: nút trên giao diện hoặc phím Space/Shift; hồi 60s, nâng cấp bằng vàng (cấp tối đa 5, hồi tối thiểu 30s, quãng tối đa 5.2 ô), có ảnh mờ, va chạm an toàn (không xuyên tường), hiển thị đếm ngược. Không nằm trong `SKILLS` nên không đổi giao thức multiplayer.
+- **Tốc độ game X1/X2/X3**: mô phỏng chia bước ≤ 0.05s; UI, âm thanh, rung và đồng hồ thật không bị nhân tốc độ.
+- **Nhập xu ẩn**: chạm 5 lần liên tiếp vào số vàng; nhập số nguyên 0…9.999.999. Chỉ đặt số dư, không tính vào thống kê "vàng kiếm được".
+- **Rung khi mất máu thật** (Cài đặt → Hiệu năng → Rung); an toàn nếu máy không hỗ trợ. APK cần quyền `VIBRATE` (đã tự vá ở `tools/patch-manifest.mjs`).
+- **Cỏ từ `grass.png`**: cắt sẵn bằng `tools/build_grass_assets.py`; mọc theo cụm ven nước/ven đường/đất trống, tránh cổng quái và điểm xuất phát; lay theo gió và nghiêng khi nhân vật bước qua.
+- **Nút phụ trên bản đồ xem trước**: biểu tượng chia sẻ → mở bảng chia sẻ của hệ thống (hoặc chép mã bản đồ).
+
+### Web / PWA / APK (dùng chung một mã nguồn)
+- **Chạy dev**: `npm install && npm run dev`.
+- **Build Web/PWA**: `npm run build` → thư mục `dist/` (tĩnh, đặt lên bất kỳ host HTTPS nào). Plugin trong `vite.config.js` gắn mã bản build và danh sách file vào `dist/sw.js`; mỗi bản build có cache riêng, cache cũ tự xóa. Khi có bản mới, màn hình hiện thanh "Cập nhật". Cài đặt app: menu trình duyệt → "Cài đặt ứng dụng" (cần HTTPS hoặc localhost).
+- **Deploy GitHub Pages**: `.github/workflows/deploy-web.yml` (bật Pages → Source: GitHub Actions). Hoặc `npx serve dist`.
+- **Build APK**: không đổi — `.github/workflows/build-apk.yml` (nay có thêm bước vá manifest) hoặc `npm run build && npx cap add android && node tools/patch-manifest.mjs && npx cap sync android` rồi `./gradlew assembleDebug`. Service worker **không** đăng ký trong APK.
+- **Kiểm thử**: `npm test` (gồm `tests/upgrade.test.mjs` cho Lướt, tốc độ, hiệu năng, cỏ, nhập xu, âm thanh, migrate cài đặt, rung, PWA).

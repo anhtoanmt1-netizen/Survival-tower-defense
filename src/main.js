@@ -14,10 +14,15 @@ import { initScreen, bindScreen } from './ui/screen.js';
 import { initSettingsPanel } from './ui/settingsPanel.js';
 import { hydrateIcons, iconSvg, rasterizeIcons } from './ui/icons.js';
 import { MapPreview } from './ui/mapPreview.js';
-const $ = (id) => document.getElementById(id), PHASER_ICONS = ['heart', 'coin', 'hammer', 'shield', 'dash', 'bolt', 'gear', 'camera', 'flag', 'slime', 'pause', 'sword'];
+import { initCoinDialog } from './ui/coinDialog.js';
+import { perf } from './systems/Perf.js';
+import { initPwa } from './platform/pwa.js';
+const $ = (id) => document.getElementById(id), PHASER_ICONS = ['heart', 'coin', 'hammer', 'shield', 'dash', 'bolt', 'gear', 'camera', 'flag', 'slime', 'pause', 'sword', 'ghost'];
 let game = null, currentMapId = '', pending = '';
 if (!GAME_CONFIG.shirtColors.includes(settings.data.shirt)) settings.set({ shirt: GAME_CONFIG.shirtColors[0] });
 hydrateIcons(); initScreen();
+const coinDialog = initCoinDialog();
+initPwa({ onUpdate: (apply) => { $('updbar').hidden = false; $('updbtn').onclick = () => apply(); } });
 const panel = initSettingsPanel({
   onToggle: (open) => game?.scene.getScene('Game')?.setSettingsOpen?.(open),
   onCopy: () => copy(currentMapId), onPause: () => game?.scene.getScene('Game')?.togglePause(), onMenu: () => backToMenu(),
@@ -67,6 +72,7 @@ function copy(text) {
 }
 async function loadFonts() { try { await Promise.all(FONT_FILES.map((w) => document.fonts.load(`${w} 14px Montserrat`, 'ĐợtẢạ Tiếng Việt ăâêôơư 0123456789'))); } catch { /* dùng font dự phòng */ } }
 const runInfo = (id) => { const p = parseMapId(id), t = TERRAIN_THEMES[p.theme]; return `${t ? t.vi + ' – ' + t.name : p.theme} · ${p.size}×${p.size}`; };
+let unsubPerf = null;
 async function start() {
   if (!isUnlocked(settings.data.difficulty, settings.data.cleared)) { settings.set({ difficulty: 'easy' }); paintDiff(); } // chặn bắt đầu cấp đang khóa
   const t = typedId(); if (t.error) { $('err').textContent = t.error; return; } const id = t.id; $('err').textContent = '';
@@ -76,12 +82,12 @@ async function start() {
   $('menu').hidden = true; panel.setRun(id, runInfo(id)); $('endmodal').hidden = true; $('pauseov').hidden = true; btn.classList.remove('busy');
   game = new Phaser.Game({
     type: Phaser.AUTO, parent: 'game', backgroundColor: '#1b2a1b', pixelArt: true,
-    scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' }, input: { activePointers: 3 }, fps: { target: 60 },
+    scale: { mode: Phaser.Scale.RESIZE, width: '100%', height: '100%' }, input: { activePointers: 3 }, fps: { target: 60, ...(perf.p.fpsLimit ? { limit: perf.p.fpsLimit } : {}) },
     scene: [],
   });
-  bindScreen(game);
+  bindScreen(game); perf.applyToGame(game); unsubPerf?.(); unsubPerf = settings.on((d, keys) => { if (keys.includes('perf')) perf.applyToGame(game); }); audio.startAmbience();
   // Thứ tự thêm = thứ tự vẽ: Game trước (dưới), UI sau (trên cùng). Đảo ngược sẽ làm nút bị bản đồ che mất.
-  game.scene.add('Game', GameScene, true, { mapId: id, name, shirt: settings.data.shirt, difficulty: settings.data.difficulty, debug, onEnd, openSettings: () => panel.open(), icons });
+  game.scene.add('Game', GameScene, true, { mapId: id, name, shirt: settings.data.shirt, difficulty: settings.data.difficulty, debug, onEnd, openSettings: () => panel.open(), coinDialog, icons });
   game.scene.add('UI', UIScene, false);
 }
 const mmss = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
@@ -92,10 +98,11 @@ function onEnd(st) {
   $('endstats').innerHTML = [['Độ khó', d.name], ['Slime đã diệt', st.kills], ['Vàng kiếm được', st.gold], ['Số tháp đã xây', st.towers], ['Sát thương gây ra', st.damage.toLocaleString('vi-VN')], ['Thời gian sống sót', mmss(st.time)], ['Mã bản đồ', st.mapId]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
   $('endmodal').hidden = false;
 }
-function backToMenu() { game?.destroy(true); game = null; bindScreen(null); panel.setRun(null); ['tpanel', 'skillmodal', 'toast', 'pauseov', 'endmodal'].forEach((id) => ($(id).hidden = true)); $('menu').hidden = false; $('mapid').value = ''; newPending(); showBest(); audio.setMusic('menu'); }
+function backToMenu() { audio.stopAmbience(); unsubPerf?.(); unsubPerf = null; game?.destroy(true); game = null; bindScreen(null); panel.setRun(null); ['tpanel', 'skillmodal', 'toast', 'pauseov', 'endmodal'].forEach((id) => ($(id).hidden = true)); $('menu').hidden = false; $('mapid').value = ''; newPending(); showBest(); audio.setMusic('menu'); }
 $('start').onclick = start;
 $('resume').onclick = () => game?.scene.getScene('Game')?.togglePause();
 $('pauseset').onclick = () => panel.open(); $('menuset').onclick = () => panel.open();
 $('endmenu').onclick = () => backToMenu();
-$('endretry').onclick = () => { const id = currentMapId; game?.destroy(true); game = null; $('mapid').value = id; start(); };
+$('endretry').onclick = () => { const id = currentMapId; audio.stopAmbience(); unsubPerf?.(); unsubPerf = null; game?.destroy(true); game = null; $('mapid').value = id; start(); };
+$('mpshare').onclick = async () => { const id = $('mpid').textContent.trim(); if (!id) return; const b = $('mpshare'); try { if (navigator.share) await navigator.share({ title: 'Survival Tower Defense', text: 'Mã bản đồ: ' + id }); else await copy(id); } catch (e) { if (e?.name === 'AbortError') return; try { await copy(id); } catch { return; } } b.classList.add('done'); b.innerHTML = iconSvg('check'); setTimeout(() => { b.classList.remove('done'); b.innerHTML = iconSvg('share'); }, 1200); };
 $('random').onclick = () => { $('mapid').value = ''; newPending(); };

@@ -4,6 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#162419" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Survival Tower Defense</title>
 <style>
 /* ================= HỆ THIẾT KẾ GIAO DIỆN (dùng chung cho mọi bảng) =================
@@ -112,6 +118,17 @@ input[type=range]::-moz-range-track{height:7px;border-radius:99px;background:#00
 .set.slider.mini{grid-template-areas:"s s v"} #runid{font-family:ui-monospace,monospace;font-size:10.5px;font-weight:700;color:var(--gold);word-break:break-all}
 #settings .btn{min-height:34px;font-size:11px;padding:0 10px}
 </style>
+<style id="ui-v2">
+.mp-tool{position:absolute;right:8px;bottom:8px;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;border:1px solid #ffffff33;color:#fff;background:linear-gradient(180deg,#2a3a52cc,#141c2acc);backdrop-filter:blur(4px);box-shadow:0 4px 12px #0008;cursor:pointer;transition:transform .12s,background .2s} .mp-tool:active{transform:scale(.9)} .mp-tool.done{background:linear-gradient(180deg,#3d9b57,#1f6a38)} .mp-tool .ic{width:20px;height:20px}
+.perfmodes{display:grid;gap:8px} .perfmode{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;text-align:left;padding:10px;border-radius:14px;border:1.5px solid #ffffff1f;background:linear-gradient(180deg,#ffffff0d,#0000001a);color:inherit;cursor:pointer;transition:transform .12s,border-color .2s,background .2s} .perfmode:active{transform:scale(.98)}
+.perfmode .pi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#e6b93f22;color:var(--gold)} .perfmode b{display:block;font-size:14px} .perfmode small{display:block;color:var(--muted);line-height:1.35}
+.perfmode.sel{border-color:var(--gold);background:linear-gradient(180deg,#e6b93f33,#e6b93f10);box-shadow:0 0 16px #e6b93f28} .perfmode.sel .pi{background:radial-gradient(circle at 30% 25%,#f8e08f,#c2922a);color:#3a2a06} .perfmode .rec{font-style:normal;font-size:10px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.04em}
+.recnote{color:var(--muted)} .mutebtn{margin-left:auto;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;border:1px solid #ffffff24;background:#ffffff10;color:var(--gold);cursor:pointer;transition:transform .12s,background .2s} .mutebtn:active{transform:scale(.9)} .mutebtn.off{color:#ff8d8d;background:#ff5a5a22}
+.group.muted .set.slider{opacity:.45} .set.disabled{opacity:.5;pointer-events:none}
+#coinmodal input{width:100%;box-sizing:border-box;min-height:46px;padding:0 14px;border-radius:12px;border:1.5px solid #ffffff2a;background:#0007;color:#fff;font:700 20px/1 Montserrat,system-ui,sans-serif;text-align:center} #coinmodal input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px #e6b93f33} #coinmodal .err{color:#ff8d8d;min-height:1.2em}
+@media (prefers-reduced-motion:reduce){.perfmode,.mutebtn,.mp-tool{transition:none}}
+#updbar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-radius:16px;background:#141c2af2;border:1px solid #ffffff2a;box-shadow:0 8px 24px #000a;color:#fff;font-size:13px} #updbar[hidden]{display:none}
+</style>
 </head>
 <body>
 <div id="safe-probe"></div>
@@ -127,13 +144,15 @@ input[type=range]::-moz-range-track{height:7px;border-radius:99px;background:#00
 <div id="skillmodal" class="overlay" hidden><div class="panel sm"><div class="panel-head"><span class="badge" data-icon="star"></span><div class="ttl">Chọn nhánh kỹ năng</div></div><div class="panel-body"><small id="smsub"></small><div id="smcards"></div><button id="smclose" class="btn" type="button">Để sau</button></div></div></div>
 <div id="pauseov" class="overlay" hidden><div class="panel" style="width:min(320px,100%)"><div class="panel-head"><span class="badge" data-icon="pause"></span><div class="ttl">Tạm dừng</div></div><div class="panel-body"><button id="resume" class="btn primary" type="button"><span data-icon="play"></span>Tiếp tục</button><button id="pauseset" class="btn" type="button"><span data-icon="gear"></span>Cài đặt</button></div></div></div>
 <div id="endmodal" class="overlay" hidden><div class="panel" style="width:min(380px,100%)"><div class="panel-body" style="text-align:center;padding:18px 14px 14px"><div id="endico" class="end-ico" data-icon="trophy"></div><h2 id="endtitle"></h2><small id="endsub" style="font-size:12px"></small><div id="endstats"></div><div class="row"><button id="endmenu" class="btn" type="button"><span data-icon="home"></span>Về menu</button><button id="endretry" class="btn primary" type="button"><span data-icon="refresh"></span>Chơi lại</button></div></div></div></div>
+<div id="updbar" hidden><span>Có bản cập nhật mới</span><button id="updbtn" class="btn primary" type="button">Cập nhật</button></div>
+<div id="coinmodal" class="overlay" hidden><div class="panel" style="width:min(340px,100%)" role="dialog" aria-modal="true" aria-labelledby="cointtl"><div class="panel-head"><span class="badge" data-icon="coin"></span><div class="ttl" id="cointtl">Nhập số vàng</div><button id="coinclose" class="btn icon ghost" type="button" aria-label="Đóng" data-icon="close"></button></div><div class="panel-body"><small>Vàng hiện có: <b id="coincur">0</b></small><input id="coininp" type="text" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="Số vàng mới"><small id="coinerr" class="err"></small><div class="row"><button id="coincancel" class="btn" type="button">Hủy</button><button id="coinok" class="btn primary" type="button"><span data-icon="check"></span>Áp dụng</button></div></div></div></div>
 <div id="settings" class="overlay" hidden><div class="panel sheet"><div class="panel-head"><span class="badge" data-icon="gear"></span><div class="ttl">Cài đặt</div><button id="setclose" class="btn icon ghost" type="button" aria-label="Đóng" data-icon="close"></button></div><div id="settabs" class="tabs"></div><div id="setbody"></div></div></div>
 <div id="menu">
   <div class="panel">
     <div class="panel-head"><span class="badge" data-icon="tower"></span><div class="logo"><div><b>Survival Tower Defense</b><small>Bảo vệ nông trại khỏi 100 đợt slime</small></div></div></div>
     <div class="panel-body">
       <section class="mp span2">
-        <div class="mp-frame"><canvas id="mpcanvas" aria-label="Bản đồ xem trước"></canvas><div id="mpload" class="mp-load"></div></div>
+        <div class="mp-frame"><canvas id="mpcanvas" aria-label="Bản đồ xem trước"></canvas><div id="mpload" class="mp-load"></div><button id="mpshare" class="mp-tool" type="button" aria-label="Chia sẻ mã bản đồ" title="Chia sẻ mã bản đồ" data-icon="share"></button></div>
         <div class="mp-info"><div><h3>Bản đồ xem trước</h3><b id="mpname">—</b><br><small id="mpblurb"></small></div><div id="mpchips" class="chips"></div><div class="legend"><span><i style="background:#b06cff"></i>Cổng quái</span><span><i style="background:#ffd65a"></i>Xuất phát</span><span><i style="background:#265c34"></i>Rừng</span></div><div class="code" id="mpid"></div></div>
       </section>
       <label class="fld">Tên nhân vật<input id="name" type="text" autocomplete="off" /></label>

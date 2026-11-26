@@ -1,12 +1,24 @@
 import { settings } from '../config/settings.js';
-// Âm thanh tổng hợp bằng WebAudio (không cần file mp3 -> chạy offline trong APK, nhẹ). Hai bus riêng: nhạc nền và hiệu ứng.
+// Âm thanh tổng hợp bằng WebAudio (không cần file mp3 -> chạy offline trong APK, nhẹ).
+// BỐN NHÓM âm lượng độc lập, mỗi nhóm một bus + bật/tắt + âm lượng riêng (lưu trong settings.audio):
+//   ambient (nhạc nền, âm thanh môi trường, giao diện/sự kiện hệ thống) · tower (xây, nâng cấp, bắn, trúng đòn) · monster (xuất hiện, chết, tấn công, vàng rơi) · character (bước chân, Dash, kỹ năng, nhận sát thương)
 // Gọi audio.unlock() trong sự kiện chạm đầu tiên (trình duyệt/Android yêu cầu), sau đó audio.play('tên') ở mọi nơi.
 const MIDI = (n) => 440 * Math.pow(2, (n - 69) / 12);
 // Tiến trình hợp âm (La thứ): Am – F – C – G, mỗi hợp âm 1 ô nhịp = 8 bước móc đơn.
 const CHORDS = [[57, 60, 64], [53, 57, 60], [48, 55, 64], [55, 59, 62]], ROOTS = [33, 29, 36, 31];
 const ARP = [0, 2, 1, 2, 0, 1, 2, 1], LEAD = [0, -1, 2, -1, 1, -1, 2, 1];
 // minGap: giãn cách tối thiểu (ms) giữa hai lần phát cùng một âm -> nhiều tháp bắn cùng lúc không thành tiếng ồn.
-const GAP = { shoot_arrow: 55, shoot_ice: 55, shoot_fire: 55, hit: 45, crit: 60, slime_die: 50, slime_spawn: 140, coin: 70, click: 30, warn: 200 };
+const GAP = { shoot_arrow: 55, shoot_ice: 55, shoot_fire: 55, hit: 45, crit: 60, slime_die: 50, slime_spawn: 140, slime_attack: 120, coin: 70, click: 30, warn: 200, footstep: 70, dash: 120 };
+export const GROUPS = ['ambient', 'tower', 'monster', 'character'];
+// Mỗi hiệu ứng thuộc đúng MỘT nhóm. Âm giao diện (bấm, mở/đóng bảng) và tiếng báo đợt/thắng/thua thuộc ambient.
+export const SFX_GROUP = {
+  click: 'ambient', open: 'ambient', close: 'ambient', error: 'ambient', warn: 'ambient', wave_start: 'ambient', wave_boss: 'ambient', win: 'ambient', lose: 'ambient',
+  sell: 'tower', build_start: 'tower', build_done: 'tower', upgrade: 'tower', evolve: 'tower', pick: 'tower', shoot_arrow: 'tower', shoot_ice: 'tower', shoot_fire: 'tower', hit: 'tower', crit: 'tower',
+  coin: 'monster', slime_die: 'monster', slime_spawn: 'monster', slime_attack: 'monster',
+  footstep: 'character', dash: 'character', dash_ready: 'character', speed: 'character', player_hurt: 'character', player_die: 'character', skill_invincible: 'character', skill_phase: 'character', phase_end: 'character',
+};
+// Cấu hình âm lượng thực của một nhóm (thuần, kiểm thử được): ambient dùng khóa cũ music/musicVol để không mất cài đặt của người chơi.
+export const groupSetting = (a, g) => (g === 'ambient' ? { on: a.music, vol: a.musicVol } : { on: a[g], vol: a[g + 'Vol'] });
 
 class AudioSystem {
   constructor() {
@@ -18,7 +30,8 @@ class AudioSystem {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const c = (this.ctx = new AC());
       this.master = c.createGain(); this.comp = c.createDynamicsCompressor(); this.comp.threshold.value = -14; this.comp.ratio.value = 4;
-      this.musicBus = c.createGain(); this.sfxBus = c.createGain(); this.musicBus.connect(this.master); this.sfxBus.connect(this.master); this.master.connect(this.comp); this.comp.connect(c.destination);
+      this.musicBus = c.createGain(); this.bus = { ambient: c.createGain(), tower: c.createGain(), monster: c.createGain(), character: c.createGain() }; this.sfxBus = this.bus.ambient; this.curBus = this.sfxBus;
+      this.musicBus.connect(this.master); for (const g of GROUPS) this.bus[g].connect(this.master); this.master.connect(this.comp); this.comp.connect(c.destination);
       const len = c.sampleRate; this.noiseBuf = c.createBuffer(1, len, c.sampleRate); const d = this.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       this.apply();
     }
@@ -27,10 +40,12 @@ class AudioSystem {
   }
   apply() {
     if (!this.ctx) return; const a = settings.data.audio, t = this.ctx.currentTime;
-    this.musicBus.gain.setTargetAtTime(a.music ? a.musicVol * 0.55 : 0, t, 0.05); this.sfxBus.gain.setTargetAtTime(a.sfx ? a.sfxVol : 0, t, 0.05);
+    this.musicBus.gain.setTargetAtTime(a.music ? a.musicVol * 0.55 : 0, t, 0.05); // nhạc nền (ambient)
+    for (const g of GROUPS) { const q = groupSetting(a, g); this.bus[g].gain.setTargetAtTime(q.on ? q.vol : 0, t, 0.05); } // mỗi nhóm một bus riêng: chỉnh nhóm này không đụng nhóm khác
+    if (this.ambience) this.ambience.gain.gain.setTargetAtTime(a.music ? a.musicVol * 0.5 : 0, t, 0.2);
   }
   // ---------- phần tử cơ bản ----------
-  tone({ type = 'sine', f0, f1 = f0, dur = 0.15, vol = 0.3, at = 0, attack = 0.005, bus = this.sfxBus, lp = 0, vib = 0 }) {
+  tone({ type = 'sine', f0, f1 = f0, dur = 0.15, vol = 0.3, at = 0, attack = 0.005, bus = this.curBus, lp = 0, vib = 0 }) {
     const c = this.ctx, t = c.currentTime + at, o = c.createOscillator(), g = c.createGain(); let out = g;
     o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -38,7 +53,7 @@ class AudioSystem {
     if (vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 6; lg.gain.value = vib; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.05); }
     out.connect(bus); o.start(t); o.stop(t + dur + 0.05); this.voices++; o.onended = () => this.voices--;
   }
-  noise({ f0, f1 = f0, q = 1, type = 'bandpass', dur = 0.12, vol = 0.3, at = 0, bus = this.sfxBus }) {
+  noise({ f0, f1 = f0, q = 1, type = 'bandpass', dur = 0.12, vol = 0.3, at = 0, bus = this.curBus }) {
     const c = this.ctx, t = c.currentTime + at, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
     s.buffer = this.noiseBuf; s.loop = true; f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t); if (f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -46,11 +61,19 @@ class AudioSystem {
   }
   // ---------- hiệu ứng ----------
   play(name, o = {}) {
-    if (!this.ctx || this.ctx.state !== 'running' || !settings.data.audio.sfx) return;
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const grp = SFX_GROUP[name] || 'ambient', q = groupSetting(settings.data.audio, grp); if (!q.on || q.vol <= 0) return; // nhóm tắt: không tạo nút âm thanh nào
     const now = performance.now(), gap = GAP[name] ?? 0; if (gap && now - (this.last[name] || 0) < gap) return; this.last[name] = now;
     if (this.voices > 40) return; const fn = SFX[name]; if (!fn) return; const p = (o.pitch ?? 1) * (1 + (Math.random() - 0.5) * 0.08);
-    try { fn(this, p, o.vol ?? 1); } catch { /* âm thanh không bao giờ được làm sập game */ }
+    try { this.curBus = this.bus[grp]; fn(this, p, o.vol ?? 1); } catch { /* âm thanh không bao giờ được làm sập game */ }
   }
+  // ---------- âm thanh môi trường: gió nhẹ qua cỏ (một nguồn nhiễu lặp + bộ lọc + dao động chậm, gần như không tốn CPU) ----------
+  startAmbience() {
+    if (!this.ctx || this.ambience) return; const c = this.ctx, src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    src.buffer = this.noiseBuf; src.loop = true; f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 0.6; g.gain.value = 0; lfo.frequency.value = 0.11; lg.gain.value = 0.014; lfo.connect(lg); lg.connect(g.gain);
+    src.connect(f); f.connect(g); g.connect(this.musicBus); src.start(); lfo.start(); this.ambience = { src, lfo, gain: g, base: 0.03 }; this.apply(); g.gain.setTargetAtTime(0.03, c.currentTime, 0.8);
+  }
+  stopAmbience() { const a = this.ambience; if (!a) return; this.ambience = null; try { a.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3); setTimeout(() => { a.src.stop(); a.lfo.stop(); }, 1200); } catch { /* đã dừng */ } }
   // ---------- nhạc nền: chuỗi hợp âm + bass + arpeggio + trống, cường độ tăng theo trận ----------
   setMusic(mode) { // 'menu' | 'calm' | 'battle' | null
     this.wantMusic = mode; this.musicMode = mode; this.intensity = mode === 'battle' ? 1 : mode === 'calm' ? 0.5 : 0;
@@ -109,6 +132,11 @@ const SFX = {
   warn: (a, p, v) => T(a, { type: 'square', f0: 1000 * p, dur: 0.06, vol: 0.08 * v, lp: 3000 }),
   wave_start: (a, p, v) => { T(a, { type: 'sawtooth', f0: 196, dur: 0.7, vol: 0.14 * v, lp: 900, attack: 0.08 }); T(a, { type: 'sawtooth', f0: 294, dur: 0.7, vol: 0.12 * v, lp: 900, attack: 0.08 }); },
   wave_boss: (a, p, v) => { T(a, { type: 'sawtooth', f0: 98, dur: 1.1, vol: 0.2 * v, lp: 700, attack: 0.1 }); T(a, { type: 'sawtooth', f0: 147, dur: 1.1, vol: 0.16 * v, lp: 700, attack: 0.1 }); for (let i = 0; i < 4; i++) T(a, { type: 'sine', f0: 110, f1: 40, dur: 0.2, vol: 0.4 * v, at: i * 0.22 }); },
+  // bước chân: thịch trầm + xào xạc ngắn; p đổi theo chân trái/phải để không đều như máy
+  footstep: (a, p, v) => { T(a, { type: 'sine', f0: 105 * p, f1: 62 * p, dur: 0.07, vol: 0.12 * v }); N(a, { f0: 900 * p, f1: 380, q: 0.7, type: 'lowpass', dur: 0.06, vol: 0.09 * v }); },
+  dash: (a, p, v) => { N(a, { f0: 700, f1: 3600, q: 1.4, dur: 0.22, vol: 0.2 * v }); T(a, { type: 'sine', f0: 260 * p, f1: 640 * p, dur: 0.2, vol: 0.1 * v }); },
+  dash_ready: (a, p, v) => { T(a, { type: 'sine', f0: 1175 * p, dur: 0.1, vol: 0.12 * v }); T(a, { type: 'sine', f0: 1568 * p, dur: 0.16, vol: 0.12 * v, at: 0.07 }); },
+  slime_attack: (a, p, v) => { T(a, { type: 'sine', f0: 240 * p, f1: 120 * p, dur: 0.12, vol: 0.14 * v, vib: 20 }); N(a, { f0: 600, f1: 220, q: 2, dur: 0.1, vol: 0.1 * v }); },
   win: (a, p, v) => { [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => T(a, { type: 'triangle', f0: f, dur: i === 6 ? 1.2 : 0.22, vol: 0.2 * v, at: i * 0.16, vib: i === 6 ? 5 : 0 })); },
   lose: (a, p, v) => { [440, 392, 349, 294, 220].forEach((f, i) => T(a, { type: 'triangle', f0: f, dur: i === 4 ? 1.2 : 0.35, vol: 0.2 * v, at: i * 0.28, lp: 1500 })); },
 };

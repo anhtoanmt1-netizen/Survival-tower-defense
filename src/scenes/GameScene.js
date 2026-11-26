@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { TOWER_TYPES, BRANCHES } from '../config/towers.js';
-import { SKILLS, SPEED_UPGRADE, speedUpgradeCost } from '../config/skills.js';
+import { SKILLS, DASH, SPEED_UPGRADE, speedUpgradeCost } from '../config/skills.js';
+import { GAME_SPEEDS, nextSpeed, subSteps } from '../sim/gameSpeed.js';
+import { perf } from '../systems/Perf.js';
+import { DashFx } from '../systems/DashFx.js';
+import { vibrate, patternFor, cancelVibration } from '../platform/haptics.js';
 import { WAVE_SETTINGS } from '../config/waves.js';
 import { generateMap, parseMapId } from '../map/index.js';
 import { Grid } from '../map/grid.js';
@@ -49,6 +53,14 @@ export class GameScene extends Phaser.Scene {
     }, rng, { contactDamage: diff.contactDamage });
     this.player = new Player(this, this.grid, s.x + 0.5, s.y + 0.5, { name: this.opts.name, shirt: this.opts.shirt, hp: diff.playerHp, skillCdMul: diff.skillCdMul });
     this.player.onPhaseEnd = (pl) => { this.fx.ring(pl.x * TS, pl.y * TS - 10, 0x9ad0ff, 6, 40, 0.4); this.fx.puff(pl.x * TS, pl.y * TS - 10, 0x9ad0ff, 8, 50, 0.4); this.panels.toast('Hết xuyên vật thể: đưa về ô hợp lệ gần nhất.', 'ok'); audio.play('phase_end'); };
+    this.speed = 1; this.lastStep = 0; this.dashFx = new DashFx(this); this.ambDt = 0; this.supportsSpeed = true; this.supportsDash = true; this.supportsCoin = true;
+    this.player.onStep = (foot, pl) => this.footstep(foot, pl);
+    this.player.onDashStart = (pl, dx, dy) => { const x = pl.x * TS, y = pl.y * TS - 14; audio.play('dash'); this.dashFx.begin(); this.fx.ring(x, y + 8, 0x8fd0ff, 6, 34, 0.3); this.fx.glow(x, y, 0xbfe6ff, 70, 0.3, 0.7); this.fx.dust(pl.x * TS, pl.y * TS, dx, dy, perf.p.dust + 2, 1.4); };
+    this.player.onDashTick = (pl, dt) => { this.dashFx.trail(pl, dt); if (Math.random() < 0.5) this.fx.spark(pl.x * TS, pl.y * TS - 14, 0xbfe6ff, 1, 40, 0.25, 0.7); };
+    this.player.onDashEnd = (pl) => { this.fx.puff(pl.x * TS, pl.y * TS - 8, 0xdde8f5, 5, 36, 0.3); this.fx.dust(pl.x * TS, pl.y * TS, 0, 0, perf.p.dust + 1, 1.2); };
+    this.player.onDashReady = () => { audio.play('dash_ready'); };
+    this.visHandler = () => { if (document.hidden && this.state === 'playing' && !this.pause.wanted.has('user')) { this.togglePause(); } if (document.hidden) cancelVibration(); }; document.addEventListener('visibilitychange', this.visHandler); // chạy nền / khóa màn hình: tự tạm dừng, không chạy mô phỏng ngầm
+    this.events.once('shutdown', () => { document.removeEventListener('visibilitychange', this.visHandler); this.dashFx.destroy(); cancelVibration(); }); this.unsubPerf = settings.on((d, keys) => { if (keys.includes('perf')) perf.applyToGame(this.game); }); this.events.once('shutdown', () => this.unsubPerf?.());
     this.activeGates = selectGates(map.gates, 1, rng); // 1 người = 1 cổng (multiplayer: n người = n cổng)
     this.director = new WaveDirector({ grid: this.grid, world: this.world, gates: this.activeGates, rng, diff, maxActive: diff.maxActive,
       settings: { ...WAVE_SETTINGS, firstWaveDelay: diff.firstWaveDelay, interval: diff.waveInterval, spawnPerSecond: diff.spawnPerSecond } });
@@ -97,7 +109,7 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', this.onTap, this);
     this.input.on('pointermove', (p) => { if (this.placing && p.id === this.placing.id) this.updateGhost(p); });
     this.input.on('pointerup', this.endPlacement, this); this.input.on('pointerupoutside', this.endPlacement, this);
-    const k = this.input.keyboard; this.keys = k.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT');
+    const k = this.input.keyboard; this.keys = k.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT'); k.on('keydown-SPACE', () => this.useDash()); k.on('keydown-SHIFT', () => this.useDash());  // Dash cho bàn phím
     if (this.opts.debug) { // phím debug cho dev: ?debug=1
       k.on('keydown-H', () => this.player.hurt()); k.on('keydown-B', () => this.player.startBuild()); k.on('keydown-K', () => this.player.die());
       k.on('keydown-X', () => { let b = null, bd = 1e9; for (const m of this.world.monsters) { if (m.dying) continue; const d = (m.x - this.player.x) ** 2 + (m.y - this.player.y) ** 2; if (d < bd) { bd = d; b = m; } } if (b) this.world.damage(b, 9999); });
@@ -115,6 +127,25 @@ export class GameScene extends Phaser.Scene {
     const x = this.player.x * TS, y = this.player.y * TS - 16, c = name === 'invincible' ? 0xffe066 : 0x9ad0ff;
     this.fx.ring(x, y, c, 8, 48, 0.5); this.fx.puff(x, y, c, 12, 70, 0.5); this.fx.glow(x, y, c, 80, 0.5); audio.play('skill_' + name); this.panels.toast(`${cfg.icon} ${cfg.name}: ${cfg.duration}s`, 'ok');
   }
+  // --- Dash (Lướt): hướng = joystick/WASD hiện tại, không có thì hướng nhìn. Bị chặn khi tạm dừng / đã chết / đang xây. ---
+  useDash() {
+    if (this.state !== 'playing' || this.pause.frozen || this.player.dead) return; const ui = this.scene.get('UI'), r = this.player.tryDash(this.lastVec || ui?.joystick?.vec);
+    if (r.ok) return; const d = this.player.dash; if (r.reason === 'cooldown') { const cd = Math.ceil(d.cd); this.panels.toast(`${DASH.name} đang hồi chiêu: ${cd}s`); } else if (r.reason === 'blocked') this.panels.toast('Phía trước bị chặn.'); audio.play('error');
+  }
+  upgradeDash() {
+    if (this.state !== 'playing' || this.player.dead) return; const d = this.player.dash; if (d.maxed) return this.panels.toast('Lướt đã đạt cấp tối đa.');
+    const cost = d.upgradeCost(this.diff.upgradeMul); if (!this.economy.spend(cost)) return this.panels.toast(`Không đủ vàng (cần ${cost}).`);
+    d.upgrade(); audio.play('speed'); this.fx.float(this.player.x * TS, this.player.y * TS - 40, `${DASH.name} LV${d.level}`, '#9ad0ff'); this.panels.toast(`${DASH.name} LV${d.level}: hồi ${d.cooldown}s · ${d.distance.toFixed(1).replace('.', ',')} ô`, 'ok');
+  }
+  // --- Tốc độ game X1/X2/X3: chỉ nhân thời gian MÔ PHỎNG (chuyển động, quái, tháp, spawn, hồi chiêu, hoạt ảnh nhân vật/quái). UI, âm thanh, rung, tween của Phaser chạy theo đồng hồ thật. ---
+  cycleSpeed() { this.setSpeed(nextSpeed(this.speed)); }
+  setSpeed(n) { this.speed = GAME_SPEEDS.includes(n) ? n : 1; this.panels.toast(`Tốc độ game: X${this.speed}`, 'ok'); audio.play('click'); }
+  footstep(foot, pl) { // bước chân khớp khung hình chạm đất; giãn cách theo đồng hồ thật để X3 không thành tiếng dày đặc
+    const now = performance.now(); if (now - this.lastStep < 95) return; this.lastStep = now; const sp = Math.hypot(pl.vx, pl.vy) || 1;
+    audio.play('footstep', { pitch: foot ? 1.07 : 0.93 }); this.fx.dust(pl.x * TS, pl.y * TS, pl.vx / sp, pl.vy / sp, perf.p.dust);
+  }
+  // --- nhập xu (mở khóa bằng 5 lần chạm vào ô tổng xu): đặt đúng số xu, không đụng thống kê "vàng kiếm được" ---
+  openCoinDialog() { if (this.state !== 'playing' || !this.opts.coinDialog) return; this.pause.set('coin', true); this.opts.coinDialog(this.economy.gold, (v) => { this.pause.set('coin', false); if (v !== null) { this.economy.set(v); this.fx.float(this.player.x * TS, this.player.y * TS - 40, '🪙 ' + this.economy.gold, '#ffd24a'); audio.play('coin'); } }); }
   upgradeSpeed() {
     if (this.state !== 'playing' || this.player.dead) return; const lv = this.player.speedLevel;
     if (lv >= SPEED_UPGRADE.maxLevel) return this.panels.toast('Tốc độ chạy đã tối đa.');
@@ -184,21 +215,27 @@ export class GameScene extends Phaser.Scene {
     this.wallArm = w.id; this.wallView.arm(w); this.panels.toast(`Chạm tường lần nữa để phá (hoàn ${this.ts.wallRefund()} vàng).`); this.wallTimer?.remove(); this.wallTimer = this.time.delayedCall(2500, () => this.disarmWall());
   }
   disarmWall() { this.wallArm = null; this.wallView?.arm(null); this.wallTimer?.remove(); }
+  // Một bước mô phỏng (dt <= 0.05s, đã nhân tốc độ game). Trả về true nếu nhân vật vừa mất máu.
+  stepSim(dt, vec) {
+    this.player.update(dt, vec); this.director.update(dt); let hurt = false;
+    const events = this.world.update(dt, [this.player]); if (events.length) { hurt = true; this.hurtFlag = true; audio.play('slime_attack'); audio.play(this.player.dead ? 'player_die' : 'player_hurt'); if (this.player.dead || !this.hurtVib) this.hurtVib = patternFor(this.diff.contactDamage, this.player.dead); }
+    this.economy.update(dt, this.ts.towers.length, this.ts.buildCost()); this.ts.update(dt); this.checkEnd(dt); return hurt;
+  }
   update(_, ms) {
-    const dt = Math.min(0.05, ms / 1000), ui = this.scene.get('UI'), K = this.keys;
+    const real = Math.min(0.05, ms / 1000), ui = this.scene.get('UI'), K = this.keys; perf.tick(real);
     let vec = ui?.joystick?.vec;
     const kx = (K.D.isDown || K.RIGHT.isDown ? 1 : 0) - (K.A.isDown || K.LEFT.isDown ? 1 : 0), ky = (K.S.isDown || K.DOWN.isDown ? 1 : 0) - (K.W.isDown || K.UP.isDown ? 1 : 0);
-    if (kx || ky) { this.kv.set(kx, ky).normalize(); vec = this.kv; }
-    const frozen = this.pause.frozen;
-    if (!frozen && this.state === 'playing') { // bảng chọn nhánh / tạm dừng / kết thúc: dừng mô phỏng
-      this.player.update(dt, vec); this.director.update(dt);
-      const events = this.world.update(dt, [this.player]); if (events.length) { this.cameras.main.shake(120, 0.004); audio.play(this.player.dead ? 'player_die' : 'player_hurt'); }
-      this.economy.update(dt, this.ts.towers.length, this.ts.buildCost()); this.ts.update(dt); this.checkEnd(dt);
+    if (kx || ky) { this.kv.set(kx, ky).normalize(); vec = this.kv; } this.lastVec = vec;
+    const frozen = this.pause.frozen, sim = real * this.speed;
+    if (!frozen && this.state === 'playing') { // bảng chọn nhánh / tạm dừng / kết thúc: dừng mô phỏng. Chia nhỏ bước (≤0,05s) để x2/x3 không bỏ sót va chạm, sự kiện hay spawn.
+      this.hurtFlag = false; this.hurtVib = null; const n = subSteps(sim), h = sim / n; for (let i = 0; i < n && this.state === 'playing'; i++) this.stepSim(h, vec);
+      if (this.hurtFlag) { this.cameras.main.shake(120, 0.004); if (this.hurtVib) vibrate(this.hurtVib); } // rung điện thoại đúng lúc THỰC SỰ mất máu (takeDamage đã trả về true), một lần mỗi khung
     } else this.player.update(0, null);
     const cam = this.cameras.main, F2 = settings.data.fx; this.fx.flashes = 0; this.ground.update(cam);
-    this.objects.update(dt, cam); this.ambient.update(dt, this.fx.density); this.water.update(dt, cam, F2.water, this.fx.density); this.grass.update(dt, cam, frozen ? null : this.player, F2.grass); // cảnh quan luôn sống động kể cả khi tạm dừng; cỏ chỉ nghiêng khi nhân vật đang chạy
-    this.fx.update(dt); this.renderer.sync(this.world.monsters, frozen ? 0 : dt, cam); this.towerView.sync(frozen ? 0 : dt, this.selected); this.wallView.sync(frozen ? 0 : dt);
-    this.musicT -= dt; if (this.musicT <= 0 && this.state === 'playing') { this.musicT = 1; const hot = this.world.active > 22 || this.director.currentSpec?.boss && this.world.active > 6; audio.setMusic(hot ? 'battle' : 'calm'); }
-    this.refT += dt; if (this.refT > 0.4) { this.refT = 0; this.panels.refresh(); }
+    this.ambDt += real; if (perf.due(0)) { const d = this.ambDt; this.ambDt = 0; this.objects.update(d, cam); this.ambient.update(d, this.fx.density * perf.p.leaf); this.water.update(d, cam, F2.water, this.fx.density * perf.p.water); } // cảnh quan thưa nhịp theo chế độ hiệu năng (dt cộng dồn => đúng tốc độ), vẫn sống động kể cả khi tạm dừng
+    this.grass.update(real, cam, frozen ? null : this.player, F2.grass); // cỏ tự quản lý nhịp; chỉ nghiêng khi nhân vật đang chạy
+    const anim = frozen ? 0 : sim; this.fx.update(real); this.dashFx.update(real); this.renderer.sync(this.world.monsters, anim, cam); this.towerView.sync(anim, this.selected); this.wallView.sync(anim);
+    this.musicT -= real; if (this.musicT <= 0 && this.state === 'playing') { this.musicT = 1; const hot = this.world.active > 22 || this.director.currentSpec?.boss && this.world.active > 6; audio.setMusic(hot ? 'battle' : 'calm'); }
+    this.refT += real; if (this.refT > 0.4) { this.refT = 0; this.panels.refresh(); }
   }
 }

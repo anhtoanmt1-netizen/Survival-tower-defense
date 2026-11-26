@@ -18,10 +18,12 @@ export const TOWER_FLAMES = {
 export const TOWER_FLAME_BLUE = 5;                // 6 hình: 0 (LV1-4), 1 (LV5), 2 (LV7), 3 (LV9), 4 (LV12), 5 (LV15)
 export const TOWER_STAGE_LEVELS = [5, 7, 9, 12, 15];
 export const towerStage = (level) => TOWER_STAGE_LEVELS.filter((l) => level >= l).length;
+export const GRASS_SPRITES = 9;   // grass_0..8.png: cắt từ tools/src/grass.png bằng tools/build_grass_assets.py
 export function assetManifest() {
   const img = [];
   for (let i = 0; i < 9; i++) img.push([`tree_${i}`, `trees/tree_${i}.png`]);
   for (let i = 0; i < 6; i++) img.push([`tower_${i}`, `towers/tower_${i}.png`]);
-  img.push(['wall', 'wall/wall.png'], ['main_sheet', 'player/main_sheet.png']);
+  img.push(['wall', 'wall/wall.png'], ['main_sheet', 'player/main_sheet.png'], ['main_base', 'player/main_base.png'], ['main_hair', 'player/main_hair.png']);
+  for (let i = 0; i < GRASS_SPRITES; i++) img.push([`grass_img_${i}`, `grass/grass_${i}.png`]);
   return img;
 }

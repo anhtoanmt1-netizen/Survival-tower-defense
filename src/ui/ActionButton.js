@@ -29,6 +29,7 @@ export class ActionButton {
   }
   // s: {alpha, active, activeFrac, cd, cdFrac, sub, subColor, tint}
   setState(s) {
+    if (this.press > 1) this.press = Math.max(1, this.press - 0.012); // nảy nhẹ khi vừa sẵn sàng (đặt press > 1 để kích hoạt)
     this.apply(); const a = s.alpha ?? 1; for (const p of [this.face, this.rim, this.ico, this.shadow]) p.setAlpha(p === this.shadow ? 0.4 * a : a);
     if (s.tint !== undefined) this.face.setTint(s.tint); else this.face.setTint(this.color);
     this.sub.setText(s.sub ?? '').setColor(s.subColor ?? '#ffffff'); this.cd.clear();

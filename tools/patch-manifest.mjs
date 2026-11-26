@@ -5,6 +5,8 @@ let x = fs.readFileSync(f, 'utf8');
 let changed = false;
 // Cho phép ws:// (cleartext) để thử qua Wi-Fi nội bộ. Khi phát hành thật chỉ dùng wss:// thì hãy bỏ dòng này.
 if (!x.includes('android:usesCleartextTraffic')) { x = x.replace('<application', '<application android:usesCleartextTraffic="true"'); changed = true; console.log('Đã bật usesCleartextTraffic (ws:// cho thử nghiệm).'); }
+// Quyền rung (VIBRATE) cho tính năng rung khi mất máu; chuẩn Android, không cần người dùng cấp thêm.
+if (!x.includes('android.permission.VIBRATE')) { x = x.replace(/<manifest[^>]*>/, (m) => m + '\n    <uses-permission android:name="android.permission.VIBRATE" />'); changed = true; console.log('Đã thêm quyền VIBRATE.'); }
 if (x.includes('android:scheme="survivaltd"')) { if (changed) fs.writeFileSync(f, x); console.log('Manifest đã có intent-filter.'); process.exit(0); }
 const filter = `
             <intent-filter>

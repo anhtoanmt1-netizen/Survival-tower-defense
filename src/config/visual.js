@@ -3,7 +3,7 @@ export const VISUAL = {
   tree: { footprint: 2, displayW: 112, legacyW: 52, texW: 345, refW: 345, baseOffset: 3 },         // cây 2x2 ô: rộng 112px thế giới (ô = 32px) cho cây rộng refW=345px (ảnh gốc, giữ nguyên độ phân giải); cây hẹp hơn (thông) co cùng tỉ lệ; bản đồ cũ (1 ô) giữ 52px
   shadow: { tree: [74, 24, 0.3], rock: [46, 14, 0.26], bush: [30, 10, 0.22], tower: [88, 30, 0.36] },   // [rộng, cao, độ đậm] bóng tiếp đất
   water: { max: 34, perSecond: 16, glintLife: 1.0, rippleLife: 1.9, tries: 10 },        // tia phản chiếu + gợn sóng (sprite có giới hạn số lượng)
-  grass: { maxTufts: 420, wind: 0.1, gust: 0.035, bendRadius: 22, bendMax: 0.75, density: 1.0, cellsMax: 1800 },
+  grass: { maxTufts: 640, wind: 0.065, gust: 0.022, windDir: 0.35, bendRadius: 26, bendMax: 0.5, density: 1.0 },   // maxTufts = mức đầy đủ (chế độ Cao cấp) để quy đổi tỉ lệ làm thưa; wind/gust: biên độ rad; windDir: hướng gió (rad); bendMax: góc nghiêng tối đa khi bị giẫm
   // Lá/cánh hoa rơi theo từng loài cây (chỉ số = tree_<i>): màu, tần suất, tốc độ rơi/trôi ngang, độ đung đưa, cỡ, xoay
   leaf: {
     default: { colors: [0x7bd34f, 0x4fa83a], rate: 0.5, vy: [14, 26], vx: [4, 14], sway: [1.5, 3], size: [0.8, 1.4], spin: 2, life: [3.2, 5.4] },

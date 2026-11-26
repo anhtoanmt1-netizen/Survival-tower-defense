@@ -2,6 +2,16 @@
 // Thêm icon mới: thêm một mục vào ICONS với markup dùng currentColor; shape cần tô nhẹ thêm thuộc tính ${F}.
 const F = ' fill="currentColor" fill-opacity=".24"', S = ' fill="currentColor" stroke="none"';
 export const ICONS = {
+  share: `<circle${F} cx="6.5" cy="12" r="2.6"/><circle${F} cx="17.5" cy="6" r="2.6"/><circle${F} cx="17.5" cy="18" r="2.6"/><path d="M8.8 10.8l6.4-3.6M8.8 13.2l6.4 3.6"/>`,
+  ghost: `<path${F} d="M5.5 20V11a6.5 6.5 0 0 1 13 0v9l-2.2-1.8-2.1 1.8-2.2-1.8-2.2 1.8-2.1-1.8z"/><circle${S} cx="9.6" cy="11" r="1.1"/><circle${S} cx="14.4" cy="11" r="1.1"/>`,
+  leaf: `<path${F} d="M5 19c-1-8 4-14 15-14 0 10-5 15-12 14z"/><path d="M5 19c3-5 6-8 10-10"/>`,
+  scale: `<path d="M12 4v16M6 20h12M5 8h14"/><path${F} d="M5 8l-2.5 6a2.8 2.8 0 0 0 5 0zM19 8l-2.5 6a2.8 2.8 0 0 0 5 0z"/>`,
+  sparkle: `<path${F} d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/><path d="M19 3v3M17.5 4.5h3"/>`,
+  vibrate: `<rect${F} x="8" y="4" width="8" height="16" rx="2"/><path d="M4.5 9v6M2.5 10.5v3M19.5 9v6M21.5 10.5v3"/>`,
+  person: `<circle${F} cx="12" cy="8" r="3.6"/><path${F} d="M5 20c0-4 3-6.4 7-6.4s7 2.4 7 6.4z"/>`,
+  mute: `<path${F} d="M4 9.6h3.4L12 6v12l-4.6-3.6H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>`,
+  zoom: `<circle${F} cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5M10.5 8v5M8 10.5h5"/>`,
+  target: `<circle cx="12" cy="12" r="8"/><circle${F} cx="12" cy="12" r="3.6"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>`,
   heart: `<path${F} d="M12 20.3s-7.4-4.5-7.4-10.1A4.2 4.2 0 0 1 12 7.7a4.2 4.2 0 0 1 7.4 2.5c0 5.6-7.4 10.1-7.4 10.1z"/>`,
   coin: `<circle${F} cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="5.2"/><path d="M12 9v6M10.2 10.6c0-.8.8-1.2 1.8-1.2s1.8.4 1.8 1.2"/>`,
   hammer: `<path${F} d="M13.2 5.2l5.6 5.6-2.2 2.2-5.6-5.6z"/><path d="M11.8 8.6L4.8 15.6a2 2 0 0 0 2.8 2.8l7-7"/>`,

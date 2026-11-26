@@ -4,9 +4,11 @@ import { VISUAL } from '../config/visual.js';
 import { orientationNote } from './screen.js';
 import { hydrateIcons, iconSvg } from './icons.js';
 import { audio } from '../systems/Audio.js';
+import { PERF_MODES, PERF_PROFILES } from '../config/performance.js';
+import { supported as hapticsSupported, vibrate } from '../platform/haptics.js';
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const TABS = [['play', 'Lối chơi', 'sword'], ['audio', 'Âm thanh', 'speaker'], ['screen', 'Màn hình', 'screen'], ['visual', 'Hình ảnh', 'eye']];
+const TABS = [['play', 'Lối chơi', 'sword'], ['audio', 'Âm thanh', 'speaker'], ['perf', 'Hiệu năng', 'bolt'], ['screen', 'Màn hình', 'screen'], ['visual', 'Hình ảnh', 'eye']];
 // Menu Cài đặt thống nhất, chia 4 tab (không bị dài): mỗi nhóm có icon + tiêu đề + mô tả; thay đổi áp dụng ngay và được lưu.
 export function initSettingsPanel({ onToggle, onCopy, onPause, onMenu }) {
   const body = $('setbody'), tabsEl = $('settabs'), redraws = [], panes = {}; let open = false, cur = 'play';
@@ -31,9 +33,31 @@ export function initSettingsPanel({ onToggle, onCopy, onPause, onMenu }) {
   gp.append(toggle('pause', 'Tự động tạm dừng khi nâng cấp', 'Dừng thời gian khi mở bảng tháp hoặc chọn nhánh kỹ năng. Tắt = game vẫn chạy trong lúc bạn chọn.', () => settings.data.gameplay.autoPause, (v) => settings.set({ gameplay: { autoPause: v } })));
   panes.play = el('div', 'pane'); panes.play.append(gp, run);
   // ---------- tab Âm thanh ----------
-  const ga = group('music', 'Nhạc nền', 'Nhạc tự đổi theo nhịp trận đấu.'); ga.append(toggle('music', 'Bật nhạc nền', 'Menu · yên tĩnh · cao trào', () => A().music, (v) => setAudio({ music: v })), slider('speaker', 'Âm lượng nhạc', 0, 100, 1, () => Math.round(A().musicVol * 100), (v) => { setAudio({ musicVol: v / 100 }); audio.unlock(); }, (v) => v + '%'));
-  const gs = group('speaker', 'Hiệu ứng âm thanh', 'Chiến đấu, kỹ năng, giao diện.'); gs.append(toggle('bolt', 'Bật hiệu ứng', 'Bắn, trúng đòn, quái, sự kiện', () => A().sfx, (v) => setAudio({ sfx: v })), slider('speaker', 'Âm lượng hiệu ứng', 0, 100, 1, () => Math.round(A().sfxVol * 100), (v) => { setAudio({ sfxVol: v / 100 }); audio.unlock(); audio.play('hit'); }, (v) => v + '%'));
-  panes.audio = el('div', 'pane'); panes.audio.append(ga, gs);
+  // 4 nhóm âm độc lập: mỗi nhóm có icon, công tắc tắt/bật (mute) và thanh âm lượng riêng
+  const AUDIO_GROUPS = [['music', 'music', 'Nhạc nền & môi trường', 'Nhạc theo nhịp trận, tiếng gió, âm nền.', null],
+    ['tower', 'tower', 'Tháp', 'Tiếng bắn, trúng đạn, xây và nâng cấp tháp.', 'shoot_arrow'],
+    ['monster', 'skull', 'Quái vật', 'Tiếng quái xuất hiện, bị đánh, chết.', 'slime_attack'],
+    ['character', 'person', 'Nhân vật', 'Bước chân, kỹ năng, lướt, nhận sát thương.', 'footstep']];
+  panes.audio = el('div', 'pane');
+  for (const [k, ic, title, desc, sample] of AUDIO_GROUPS) {
+    const g = group(ic, title, desc), mute = el('button', 'mutebtn'); mute.type = 'button'; mute.setAttribute('aria-label', 'Tắt/bật ' + title);
+    mute.onclick = () => { setAudio({ [k]: !A()[k] }); audio.unlock(); if (A()[k] && sample) audio.play(sample); }; g.querySelector('header').appendChild(mute);
+    redraws.push(() => { const on = !!A()[k]; mute.classList.toggle('off', !on); mute.innerHTML = iconSvg(on ? 'speaker' : 'mute'); g.classList.toggle('muted', !on); });
+    g.append(slider('speaker', 'Âm lượng', 0, 100, 1, () => Math.round(A()[k + 'Vol'] * 100), (v) => { setAudio({ [k + 'Vol']: v / 100 }); audio.unlock(); }, (v) => v + '%', { mini: true }));
+    const inp = g.querySelector('input'); if (sample) inp.addEventListener('change', () => { if (A()[k]) audio.play(sample); });
+    panes.audio.append(g);
+  }
+  // ---------- tab Hiệu năng ----------
+  const gm = group('bolt', 'Chế độ hiệu năng', 'Chỉ đổi độ mượt, nhiệt và pin; lối chơi giống hệt nhau ở mọi chế độ.'), modes = el('div', 'perfmodes');
+  for (const id of PERF_MODES) { const P = PERF_PROFILES[id], b = el('button', 'perfmode', `<span class="pi" data-icon="${P.icon}"></span><div><b>${P.name}</b><small>${P.blurb}</small></div><i class="rec"></i>`); b.type = 'button'; b.dataset.v = id;
+    b.onclick = () => { settings.set({ perf: { mode: id, auto: false } }); audio.play('click'); }; modes.appendChild(b); }
+  const recNote = el('small', 'recnote'); gm.append(modes, recNote);
+  redraws.push(() => { const m = settings.data.perf.mode; [...modes.children].forEach((b) => { const on = b.dataset.v === m; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on); b.querySelector('.rec').textContent = on && settings.data.perf.auto ? 'Đề xuất' : on ? 'Đang dùng' : ''; }); recNote.textContent = settings.data.perf.auto ? 'Đang dùng chế độ được đề xuất cho máy này. Bạn có thể đổi bất cứ lúc nào.' : 'Bạn đã chọn thủ công.'; });
+  const ra = el('button', 'btn', '<span data-icon="refresh"></span>Dùng đề xuất cho máy này'); ra.type = 'button'; ra.onclick = async () => { const { recommendMode } = await import('../config/performance.js'), { hardware } = await import('../platform/device.js'); settings.set({ perf: { mode: recommendMode(hardware()), auto: true } }); audio.play('close'); }; gm.append(ra);
+  const gad = group('target', 'Tự điều chỉnh', 'Khi máy tụt FPS kéo dài, tạm thưa bớt hiệu ứng phụ để đỡ nóng, tự trở lại khi ổn.'); gad.append(toggle('target', 'Tự điều chỉnh theo FPS', 'Không thay đổi lối chơi hay hình nhân vật', () => settings.data.perf.adaptive, (v) => settings.set({ perf: { adaptive: v } })));
+  const gh = group('vibrate', 'Rung', 'Rung nhẹ khi nhân vật thật sự mất máu.'); const hs = toggle('vibrate', 'Rung khi mất máu', hapticsSupported() ? 'Chỉ khi bị mất máu, không rung khi hồi hoặc lướt' : 'Thiết bị này không hỗ trợ rung', () => settings.data.haptics.enabled, (v) => { settings.set({ haptics: { enabled: v } }); if (v) vibrate([30]); });
+  if (!hapticsSupported()) hs.classList.add('disabled'); gh.append(hs);
+  panes.perf = el('div', 'pane'); panes.perf.append(gm, gad, gh);
   // ---------- tab Màn hình ----------
   const gd = group('screen', 'Hướng màn hình', 'Dọc, ngang hoặc tự xoay theo thiết bị.'); const orient = seg([['portrait', 'Dọc'], ['landscape', 'Ngang'], ['auto', 'Tự xoay']], () => settings.data.display.orientation, (v) => { settings.set({ display: { orientation: v } }); refresh(); });
   const ratioLbl = el('small', '', 'Tỷ lệ khung khi chơi ngang'), ratio = seg([['19.5:9', '19.5:9'], ['16:9', '16:9'], ['full', 'Toàn màn hình']], () => settings.data.display.ratio, (v) => settings.set({ display: { ratio: v } })), note = el('small'); note.style.color = '#ffcf6b'; gd.append(orient, ratioLbl, ratio, note);

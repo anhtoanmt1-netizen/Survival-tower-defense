@@ -18,6 +18,8 @@ jobs:
       - run: npm run build
       - name: Tạo dự án Android (nếu chưa có)
         run: '[ -d android ] || npx cap add android'
+      - name: Vá AndroidManifest (quyền rung, link mời)
+        run: node tools/patch-manifest.mjs
       - run: npx cap sync android
       - name: Build APK debug
         working-directory: android

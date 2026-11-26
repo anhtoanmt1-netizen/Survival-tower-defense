@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FONT } from '../config/ui.js';
 import { FX } from '../config/fx.js';
+import { perf } from './Perf.js';
 // Hiệu ứng dùng Object Pooling: hạt, vòng sóng, ánh sáng cộng (ADD), tia lửa, chữ nổi, số sát thương.
 // Tự giảm mật độ khi quá nhiều hiệu ứng cùng lúc (nhiều tháp bắn) để giữ FPS và tránh rối mắt.
 const lerp = (a, b, k) => a + (b - a) * k, ADDS = new Set(['fx_glow', 'fx_spark']);
@@ -10,8 +11,8 @@ export class Effects {
     this.scene = scene; this.pools = { fx_dot: [], fx_ring: [], fx_glow: [], fx_spark: [] }; this.live = []; this.texts = []; this.liveTexts = [];
     this.dNormal = []; this.dCrit = []; this.liveDmg = []; this.density = 1; this.flashes = 0;
   }
-  _img(key) { const s = this.pools[key].pop() || this.scene.add.image(0, 0, key).setDepth(8e5); if (ADDS.has(key)) s.setBlendMode(Phaser.BlendModes.ADD); return s.setVisible(true).setRotation(0).clearTint(); }
-  _room() { return this.live.length < FX.maxLive; }
+  _img(key) { const s = this.pools[key].pop() || this.scene.add.image(0, 0, key).setDepth(8e5); if (ADDS.has(key)) s.setBlendMode(Phaser.BlendModes.ADD); return s.setVisible(true).setRotation(0).setDepth(8e5).clearTint(); }
+  _room() { return this.live.length < perf.p.fxMaxLive; }
   puff(x, y, color, n = 6, speed = 40, life = 0.35, size = 1) {
     if (!this._room()) return; n = Math.max(1, Math.round(n * this.density));
     for (let i = 0; i < n; i++) {
@@ -26,6 +27,14 @@ export class Effects {
   spark(x, y, color, n = 4, speed = 70, life = 0.4, size = 1) {
     if (!this._room()) return; n = Math.max(1, Math.round(n * this.density));
     for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = speed * (0.5 + Math.random() * 0.5), s = this._img('fx_spark').setTint(color).setPosition(x, y).setRotation(Math.random() * 3); this.live.push({ s, key: 'fx_spark', t: 0, life: life * (0.7 + Math.random() * 0.5), vx: Math.cos(a) * v, vy: Math.sin(a) * v - 14, s0: 0.7 * size, s1: 0.1, a0: 1, spin: (Math.random() - 0.5) * 8 }); }
+  }
+  // Bụi dưới chân: vài hạt be nhỏ, mờ, bay lùi nhẹ so với hướng chạy rồi tan (dùng chung hồ chứa hạt, số lượng theo chế độ hiệu năng). Vẽ NGAY SAU nhân vật (depth theo chân) để không che người.
+  dust(x, y, dx = 0, dy = 0, n = perf.p.dust, scale = 1) {
+    if (!this._room()) return; n = Math.max(1, Math.round(n * Math.max(0.5, this.density)));
+    for (let i = 0; i < n; i++) {
+      const s = this._img('fx_dot').setTint(i % 2 ? 0xd9c9a3 : 0xc4b48c).setPosition(x + (Math.random() - 0.5) * 8, y - 1 + Math.random() * 2).setDepth(y - 0.3), v = 10 + Math.random() * 12;
+      this.live.push({ s, key: 'fx_dot', t: 0, life: 0.32 + Math.random() * 0.2, vx: -dx * v + (Math.random() - 0.5) * 12, vy: -dy * v * 0.5 - 6 - Math.random() * 6, s0: 0.28 * scale, s1: 0.75 * scale, a0: 0.42 });
+    }
   }
   trail(x, y, color, size = 0.8) { if (this.density < 0.4 || !this._room()) return; const s = this._img('fx_dot').setTint(color).setPosition(x, y); this.live.push({ s, key: 'fx_dot', t: 0, life: 0.28, vx: 0, vy: -6, s0: size, s1: 0.1, a0: 0.75 }); }
   float(x, y, str, color = '#ffd24a') {
@@ -42,7 +51,7 @@ export class Effects {
     this.liveDmg.push({ t, crit, age: 0, life: crit ? D.critLife : D.life, vx: (Math.random() - 0.5) * 22, rise: crit ? D.critRise : D.rise });
   }
   update(dt) {
-    this.density = Math.max(0.2, Math.min(1, 1.15 - this.live.length / FX.maxLive));
+    this.density = Math.max(0.2, Math.min(1, 1.15 - this.live.length / perf.p.fxMaxLive));
     for (let i = this.live.length - 1; i >= 0; i--) {
       const e = this.live[i]; e.t += dt; const k = e.t / e.life;
       if (k >= 1) { e.s.setVisible(false); this.pools[e.key].push(e.s); this.live.splice(i, 1); continue; }
