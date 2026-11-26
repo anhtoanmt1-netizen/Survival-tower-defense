@@ -4,6 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#162419" />
+<script>
+/* Chẩn đoán khởi động: nếu game không chạy, hiện lý do thay vì để trang trống. main.js đặt window.__stdBooted khi khởi động xong. */
+(function(){var errs=[];function bar(t){var d=document.getElementById('bootdiag');if(!d){d=document.createElement('div');d.id='bootdiag';d.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:9999;background:#3a1010f2;color:#fff;border:1px solid #ff8d8d;border-radius:12px;padding:10px 12px;font:12px/1.5 system-ui,sans-serif;white-space:pre-wrap;word-break:break-word';(document.body||document.documentElement).appendChild(d)}d.textContent=t}
+window.addEventListener('error',function(e){errs.push((e.message||'Lỗi tải tập tin')+(e.filename?' @ '+e.filename.split('/').slice(-2).join('/')+':'+e.lineno:'')); if(!window.__stdBooted)bar('Game gặp lỗi khi khởi động:\n'+errs.join('\n'))},true);
+window.addEventListener('unhandledrejection',function(e){errs.push(String(e.reason&&e.reason.message||e.reason)); if(!window.__stdBooted)bar('Game gặp lỗi khi khởi động:\n'+errs.join('\n'))});
+setTimeout(function(){if(!window.__stdBooted)bar('Game chưa khởi động được.\n'+(errs.join('\n')||'Không có lỗi script: có thể đang mở MÃ NGUỒN (index.html gốc) thay vì thư mục dist đã build. Hãy chạy "npm run build" và triển khai thư mục dist, hoặc dùng workflow Deploy Web (Pages → Source: GitHub Actions).'))},5000);})();
+</script>
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
@@ -119,7 +126,7 @@ input[type=range]::-moz-range-track{height:7px;border-radius:99px;background:#00
 #settings .btn{min-height:34px;font-size:11px;padding:0 10px}
 </style>
 <style id="ui-v2">
-.mp-tool{position:absolute;right:8px;bottom:8px;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;border:1px solid #ffffff33;color:#fff;background:linear-gradient(180deg,#2a3a52cc,#141c2acc);backdrop-filter:blur(4px);box-shadow:0 4px 12px #0008;cursor:pointer;transition:transform .12s,background .2s} .mp-tool:active{transform:scale(.9)} .mp-tool.done{background:linear-gradient(180deg,#3d9b57,#1f6a38)} .mp-tool .ic{width:20px;height:20px}
+.mp-tool{position:absolute;right:8px;bottom:8px;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;border:1px solid #ffffff33;color:#fff;background:linear-gradient(180deg,#2a3a52cc,#141c2acc);backdrop-filter:blur(4px);box-shadow:0 4px 12px #0008;cursor:pointer;transition:transform .12s,background .2s} .mp-tool:active{transform:scale(.9)} .mp-tool.done{background:linear-gradient(180deg,#3d9b57,#1f6a38)} .mp-tool .ic{width:20px;height:20px;transition:transform .45s} .mp-tool.spin .ic{transform:rotate(360deg)}
 .perfmodes{display:grid;gap:8px} .perfmode{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;text-align:left;padding:10px;border-radius:14px;border:1.5px solid #ffffff1f;background:linear-gradient(180deg,#ffffff0d,#0000001a);color:inherit;cursor:pointer;transition:transform .12s,border-color .2s,background .2s} .perfmode:active{transform:scale(.98)}
 .perfmode .pi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#e6b93f22;color:var(--gold)} .perfmode b{display:block;font-size:14px} .perfmode small{display:block;color:var(--muted);line-height:1.35}
 .perfmode.sel{border-color:var(--gold);background:linear-gradient(180deg,#e6b93f33,#e6b93f10);box-shadow:0 0 16px #e6b93f28} .perfmode.sel .pi{background:radial-gradient(circle at 30% 25%,#f8e08f,#c2922a);color:#3a2a06} .perfmode .rec{font-style:normal;font-size:10px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.04em}
@@ -152,7 +159,7 @@ input[type=range]::-moz-range-track{height:7px;border-radius:99px;background:#00
     <div class="panel-head"><span class="badge" data-icon="tower"></span><div class="logo"><div><b>Survival Tower Defense</b><small>Bảo vệ nông trại khỏi 100 đợt slime</small></div></div></div>
     <div class="panel-body">
       <section class="mp span2">
-        <div class="mp-frame"><canvas id="mpcanvas" aria-label="Bản đồ xem trước"></canvas><div id="mpload" class="mp-load"></div><button id="mpshare" class="mp-tool" type="button" aria-label="Chia sẻ mã bản đồ" title="Chia sẻ mã bản đồ" data-icon="share"></button></div>
+        <div class="mp-frame"><canvas id="mpcanvas" aria-label="Bản đồ xem trước"></canvas><div id="mpload" class="mp-load"></div><button id="mpnew" class="mp-tool" type="button" aria-label="Làm mới: bản đồ khác" title="Bản đồ khác" data-icon="refresh"></button></div>
         <div class="mp-info"><div><h3>Bản đồ xem trước</h3><b id="mpname">—</b><br><small id="mpblurb"></small></div><div id="mpchips" class="chips"></div><div class="legend"><span><i style="background:#b06cff"></i>Cổng quái</span><span><i style="background:#ffd65a"></i>Xuất phát</span><span><i style="background:#265c34"></i>Rừng</span></div><div class="code" id="mpid"></div></div>
       </section>
       <label class="fld">Tên nhân vật<input id="name" type="text" autocomplete="off" /></label>

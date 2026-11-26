@@ -163,7 +163,7 @@ Lối chơi (tốc độ, sát thương, spawn, cân bằng) **giống hệt** �
 - **Nhập xu ẩn**: chạm 5 lần liên tiếp vào số vàng; nhập số nguyên 0…9.999.999. Chỉ đặt số dư, không tính vào thống kê "vàng kiếm được".
 - **Rung khi mất máu thật** (Cài đặt → Hiệu năng → Rung); an toàn nếu máy không hỗ trợ. APK cần quyền `VIBRATE` (đã tự vá ở `tools/patch-manifest.mjs`).
 - **Cỏ từ `grass.png`**: cắt sẵn bằng `tools/build_grass_assets.py`; mọc theo cụm ven nước/ven đường/đất trống, tránh cổng quái và điểm xuất phát; lay theo gió và nghiêng khi nhân vật bước qua.
-- **Nút phụ trên bản đồ xem trước**: biểu tượng chia sẻ → mở bảng chia sẻ của hệ thống (hoặc chép mã bản đồ).
+- **Nút làm mới trên bản đồ xem trước**: biểu tượng xoay ở góc khung → đổi sang một bản đồ ngẫu nhiên khác (theo chủ đề/kích thước đang chọn) và xóa mã đã gõ.
 
 ### Web / PWA / APK (dùng chung một mã nguồn)
 - **Chạy dev**: `npm install && npm run dev`.
@@ -171,3 +171,8 @@ Lối chơi (tốc độ, sát thương, spawn, cân bằng) **giống hệt** �
 - **Deploy GitHub Pages**: `.github/workflows/deploy-web.yml` (bật Pages → Source: GitHub Actions). Hoặc `npx serve dist`.
 - **Build APK**: không đổi — `.github/workflows/build-apk.yml` (nay có thêm bước vá manifest) hoặc `npm run build && npx cap add android && node tools/patch-manifest.mjs && npx cap sync android` rồi `./gradlew assembleDebug`. Service worker **không** đăng ký trong APK.
 - **Kiểm thử**: `npm test` (gồm `tests/upgrade.test.mjs` cho Lướt, tốc độ, hiệu năng, cỏ, nhập xu, âm thanh, migrate cài đặt, rung, PWA).
+
+### Xử lý sự cố Web/PWA
+- **Trang chỉ hiện khung menu trống (không bấm được)**: nghĩa là đang phục vụ *mã nguồn* (`index.html` gốc dùng `/src/main.js` và `import 'phaser'`) chứ không phải thư mục `dist`. Trình duyệt không chạy được mã nguồn thô. Cách đúng: chạy `npm run build` rồi đưa **thư mục `dist`** lên host, hoặc dùng `.github/workflows/deploy-web.yml` (Settings → Pages → *Source: GitHub Actions*, không chọn "Deploy from a branch").
+- Nếu game không khởi động, trang tự hiện hộp đỏ ở trên cùng nêu lý do/lỗi (khối chẩn đoán trong `index.html`).
+- Sau khi triển khai bản mới mà vẫn thấy bản cũ: tải lại cứng (Ctrl+F5) hoặc bấm thanh "Cập nhật"; có thể xóa dữ liệu trang trong DevTools → Application → Service Workers → Unregister.

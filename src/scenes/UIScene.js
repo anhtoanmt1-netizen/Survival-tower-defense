@@ -1,5 +1,6 @@
 import { settings, VIEW_PRESETS, viewPresetOf } from '../config/settings.js';
 import Phaser from 'phaser';
+import { glassPanel } from '../ui/glass.js';
 import { Joystick } from '../input/Joystick.js';
 import { ActionButton } from '../ui/ActionButton.js';
 import { DASH } from '../config/skills.js';
@@ -87,7 +88,7 @@ export class UIScene extends Phaser.Scene {
       const c = S(this.add.container((i - 0.5) * (W + GAP), 0)), bg = S(this.add.graphics()), icon = S(this.add.image(0, -8, d.tex)).setOrigin(0.5, 0.5);
       icon.setScale(d.h / icon.height); const name = S(this.add.text(0, H / 2 - 30, d.name, { fontFamily: FONT, fontSize: '10.5px', fontStyle: '800', color: '#fff' }).setOrigin(0.5)), coin = S(this.add.image(-14, H / 2 - 13, 'ui_icon_coin').setDisplaySize(15, 15).setTint(0xffd24a));
       const price = S(this.add.text(-4, H / 2 - 13, '', { fontFamily: FONT, fontSize: '13px', fontStyle: '800', color: '#ffe9a0' }).setOrigin(0, 0.5)), zone = S(this.add.rectangle(0, 0, W, H, 0x000000, 0.001).setInteractive());
-      const paint = (hot) => { bg.clear().fillStyle(hot ? 0x2c4636 : 0x203528, 1).fillRoundedRect(-W / 2, -H / 2, W, H, 11).lineStyle(2, d.accent, hot ? 1 : 0.8).strokeRoundedRect(-W / 2, -H / 2, W, H, 11); bg.fillStyle(d.accent, 0.16).fillRoundedRect(-W / 2 + 3, -H / 2 + 3, W - 6, 30, { tl: 8, tr: 8, bl: 0, br: 0 }); };
+      const paint = (hot) => { bg.clear(); glassPanel(bg, -W / 2, -H / 2, W, H, 12, { accent: d.accent, body: hot ? 0x2c4636 : 0x203528, alpha: 1, hot, shadow: false }); bg.fillStyle(d.accent, hot ? 0.24 : 0.16).fillRoundedRect(-W / 2 + 4, -H / 2 + 4, W - 8, 28, { tl: 8, tr: 8, bl: 3, br: 3 }); };
       paint(false); c.add([bg, icon, name, coin, price, zone]);
       zone.on('pointerover', () => { paint(true); this.tweens.add({ targets: c, scale: 1.05, duration: 120 }); }).on('pointerout', () => { paint(false); this.tweens.add({ targets: c, scale: 1, duration: 120 }); });
       zone.on('pointerdown', (p) => { if (!this.buildOpen) return; audio.play('click'); this.tweens.add({ targets: c, scale: 0.94, duration: 70, yoyo: true }); this.setBuildOpen(false); game.beginPlacement(p, d.kind); });
@@ -96,7 +97,7 @@ export class UIScene extends Phaser.Scene {
   }
   layoutMenu() { // đặt bảng ngay phía trên cụm nút kỹ năng; vẽ khung nền
     const { MW, MH } = this; this.menuX = this.mx0; this.menuY = this.my0; this.menu.setPosition(this.menuX, this.menuY + (this.buildOpen ? 0 : 14));
-    this.menuBg.clear().fillStyle(0x0c1710, 0.5).fillRoundedRect(-MW / 2 - 3, -MH / 2 + 3, MW + 6, MH + 3, 16).fillStyle(0x14221b, 0.97).fillRoundedRect(-MW / 2, -MH / 2, MW, MH, 14).lineStyle(2, 0xe0b13a, 0.95).strokeRoundedRect(-MW / 2, -MH / 2, MW, MH, 14);
+    this.menuBg.clear(); glassPanel(this.menuBg, -MW / 2, -MH / 2, MW, MH, 16, { alpha: 0.97, gloss: 0.06 });
   }
   setBuildOpen(v) {
     if (v === this.buildOpen && this.menu.visible === v) return; this.buildOpen = v; this.menuTween?.stop(); const m = this.menu, y = this.menuY;
@@ -136,7 +137,7 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.scale, ins = safeInsets(), u = (this.u = Phaser.Math.Clamp(Math.min(width, height) / 420, 0.78, 1.25)), land = width > height;
     this.mmSize = this.expanded ? Math.min(300, Math.floor(Math.min(width, height) * 0.72)) : Math.round((land ? 96 : 112) * u);
     const Z = this.mmSize; this.mmX = width - ins.right - 10; this.mmY = ins.top + 10;
-    this.mmFrame.clear().fillStyle(0x10180f, 0.8).fillRoundedRect(this.mmX - Z - 4, this.mmY - 4, Z + 8, Z + 8, 6).lineStyle(2, 0xe0b13a, 0.95).strokeRoundedRect(this.mmX - Z - 4, this.mmY - 4, Z + 8, Z + 8, 6);
+    this.mmFrame.clear(); glassPanel(this.mmFrame, this.mmX - Z - 4, this.mmY - 4, Z + 8, Z + 8, 8, { body: 0x10180f, alpha: 0.82, gloss: 0.05 });
     this.mm.setPosition(this.mmX, this.mmY).setDisplaySize(Z, Z);
     this.mmBack.setPosition(this.mmX, this.mmY + Z + 8); this.mmShrink.setPosition(this.mmX - this.mmBack.width - 8, this.mmY + Z + 8);
     this.hx = ins.left + 12; this.hy = ins.top + 10; this.banner.setPosition(width / 2, height * 0.3); this.warn.setPosition(width / 2, ins.top + 12);
@@ -202,7 +203,7 @@ export class UIScene extends Phaser.Scene {
     const slx = hx + 24 + this.txWave.width + 14; this.icoSlime.setPosition(slx + 10, hy + 36).setDisplaySize(19, 19); this.txSlime.setPosition(slx + 24, hy + 27).setText(`${world.active}${dir.queue.length ? ' +' + dir.queue.length : ''}`);
     this.txNext.setPosition(hx + 2, hy + 51).setText(next); this.txInfo.setPosition(hx + 2, hy + 65).setText(`${diff.name} · ${this.fpsText}`);
     // nhãn gợi ý khi game đang tự tạm dừng vì bảng nâng cấp
-    const showPill = game.pause.onlyAuto && game.state === 'playing'; if (showPill !== this.pillShown) { this.pillShown = showPill; this.pillBg.clear(); this.pillIco.setVisible(showPill); this.pillTx.setVisible(showPill); if (showPill) { const { width } = this.scale, w = this.pillTx.width + 38, x = width / 2 - w / 2, y = this.hy + 28; this.pillBg.fillStyle(0x14221b, 0.9).fillRoundedRect(x, y, w, 24, 12).lineStyle(1.5, 0xe0b13a, 0.9).strokeRoundedRect(x, y, w, 24, 12); this.pillIco.setPosition(x + 14, y + 12).setDisplaySize(14, 14); this.pillTx.setPosition(x + 26, y + 5); } }
+    const showPill = game.pause.onlyAuto && game.state === 'playing'; if (showPill !== this.pillShown) { this.pillShown = showPill; this.pillBg.clear(); this.pillIco.setVisible(showPill); this.pillTx.setVisible(showPill); if (showPill) { const { width } = this.scale, w = this.pillTx.width + 38, x = width / 2 - w / 2, y = this.hy + 28; glassPanel(this.pillBg, x, y, w, 24, 12, { alpha: 0.92 }); this.pillIco.setPosition(x + 14, y + 12).setDisplaySize(14, 14); this.pillTx.setPosition(x + 26, y + 5); } }
     this.setBtn.setState({ alpha: 1 }); this.camBtn.setState({ alpha: 1 });
     this.goldRect = { x: gx - 2, y: hy - 3, w: 24 + this.txGold.width + 8, h: 28 }; this.goldZone.setPosition(this.goldRect.x, this.goldRect.y).setSize(this.goldRect.w, this.goldRect.h);
     if (dir.wave < total && cdn <= 5 && cdn > 0) { this.warn.setText(`⚠ ĐỢT ${nextWave} SẮP TỚI: ${cdn}s`).setVisible(true).setScale(1 + 0.06 * Math.sin(this.time.now / 90)); if (cdn !== this.lastWarn) { this.lastWarn = cdn; audio.play('warn'); } } else { this.warn.setVisible(false); this.lastWarn = -1; }

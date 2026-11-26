@@ -2,7 +2,6 @@
 // Thêm icon mới: thêm một mục vào ICONS với markup dùng currentColor; shape cần tô nhẹ thêm thuộc tính ${F}.
 const F = ' fill="currentColor" fill-opacity=".24"', S = ' fill="currentColor" stroke="none"';
 export const ICONS = {
-  share: `<circle${F} cx="6.5" cy="12" r="2.6"/><circle${F} cx="17.5" cy="6" r="2.6"/><circle${F} cx="17.5" cy="18" r="2.6"/><path d="M8.8 10.8l6.4-3.6M8.8 13.2l6.4 3.6"/>`,
   ghost: `<path${F} d="M5.5 20V11a6.5 6.5 0 0 1 13 0v9l-2.2-1.8-2.1 1.8-2.2-1.8-2.2 1.8-2.1-1.8z"/><circle${S} cx="9.6" cy="11" r="1.1"/><circle${S} cx="14.4" cy="11" r="1.1"/>`,
   leaf: `<path${F} d="M5 19c-1-8 4-14 15-14 0 10-5 15-12 14z"/><path d="M5 19c3-5 6-8 10-10"/>`,
   scale: `<path d="M12 4v16M6 20h12M5 8h14"/><path${F} d="M5 8l-2.5 6a2.8 2.8 0 0 0 5 0zM19 8l-2.5 6a2.8 2.8 0 0 0 5 0z"/>`,

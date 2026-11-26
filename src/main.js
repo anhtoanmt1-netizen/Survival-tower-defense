@@ -104,5 +104,7 @@ $('resume').onclick = () => game?.scene.getScene('Game')?.togglePause();
 $('pauseset').onclick = () => panel.open(); $('menuset').onclick = () => panel.open();
 $('endmenu').onclick = () => backToMenu();
 $('endretry').onclick = () => { const id = currentMapId; audio.stopAmbience(); unsubPerf?.(); unsubPerf = null; game?.destroy(true); game = null; $('mapid').value = id; start(); };
-$('mpshare').onclick = async () => { const id = $('mpid').textContent.trim(); if (!id) return; const b = $('mpshare'); try { if (navigator.share) await navigator.share({ title: 'Survival Tower Defense', text: 'Mã bản đồ: ' + id }); else await copy(id); } catch (e) { if (e?.name === 'AbortError') return; try { await copy(id); } catch { return; } } b.classList.add('done'); b.innerHTML = iconSvg('check'); setTimeout(() => { b.classList.remove('done'); b.innerHTML = iconSvg('share'); }, 1200); };
+$('mpnew').onclick = () => { const b = $('mpnew'); b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin'); $('mapid').value = ''; newPending(); setTimeout(() => b.classList.remove('spin'), 500); }; // làm mới: chọn bản đồ ngẫu nhiên khác theo chủ đề/kích thước đang chọn
 $('random').onclick = () => { $('mapid').value = ''; newPending(); };
+
+window.__stdBooted = true; // báo cho khối chẩn đoán trong index.html: module đã chạy hết phần khởi động
