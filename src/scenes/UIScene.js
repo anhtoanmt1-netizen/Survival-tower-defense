@@ -48,7 +48,6 @@ export class UIScene extends Phaser.Scene {
     // HUD: chỉ chữ, nền trong suốt (viền chữ đen giữ cho dễ đọc trên mọi nền)
     const I = (k, tint) => S(this.add.image(0, 0, 'ui_icon_' + k).setDepth(1000).setTint(tint));
     this.hud = new PlayerHud(this, { name: this.d.player.name, shirt: this.d.player.shirt }); // HUD nhân vật: avatar, tên, tim, chip vàng/đợt/quái
-    this.pillBg = S(this.add.graphics().setDepth(1050)); this.pillIco = I('pause', 0xffffff).setDepth(1051); this.pillTx = S(this.add.text(0, 0, 'Tạm dừng khi nâng cấp', { ...TXT, fontSize: '11px', fontStyle: '700', strokeThickness: 3 }).setDepth(1051)); this.pillShown = false;
     this.setBtn = new ActionButton(this, { color: 0x3a5a48, iconKey: 'ui_icon_gear', onTap: () => { audio.play('open'); game.opts.openSettings?.(); } });
     // Nút TẦM NHÌN CAMERA (cạnh minimap, cùng kích thước/kiểu với nút Cài đặt): chạm để đổi vòng Gần -> Xa -> Rộng; cùng giá trị với mục "Tầm nhìn camera" trong Cài đặt
     this.camBtn = new ActionButton(this, { color: 0x3a5a48, iconKey: 'ui_icon_camera', onTap: () => this.cycleView() });
@@ -156,6 +155,10 @@ export class UIScene extends Phaser.Scene {
     this.mx0 = Math.min(bx + rb - this.MW / 2, width - ins.right - 8 - this.MW / 2); this.my0 = this.rowTop - 22 * sc - 14 - this.MH / 2; this.layoutMenu();
   }
   // chạm có trúng nút/bảng nào (KHÔNG tính joystick) — joystick nổi dùng để không giành chạm của nút
+  // chạm có nên để joystick/UI "giành" (dùng cho kéo bản đồ): trúng nút/bảng, hoặc nằm trong vùng joystick sẽ nhận ngón này
+  claimsPointer(p) { return this.isUiPointer(p) || this.joystick.wants(p); }
+  // joystick chạm vừa nhả mà chưa kịp kéo = một cú chạm thường: chuyển cho màn chơi (chọn/nâng cấp tháp…)
+  onJoyTap(p) { this.scene.get('Game')?.onTap?.(p); }
   hitsButtons(p) { return this.isUiPointer(p, true); }
   isUiPointer(p, noJoy = false) {
     const inR = (x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h, near = (b) => Math.hypot(p.x - b.hit.x, p.y - b.hit.y) <= b.hit.r + 8, S = this.mmSize;
@@ -205,7 +208,6 @@ export class UIScene extends Phaser.Scene {
     // HUD: icon vector + số (nền trong suốt, chữ có viền)
     this.hud.setNext(next); this.hud.update(ms / 1000, { hp: player.hp, maxHp: player.maxHp, gold: game.economy.gold, wave: dir.wave, total, active: world.active, queue: dir.queue.length, dead: player.dead, info: diff.name, fps: this.fpsText });
     // nhãn gợi ý khi game đang tự tạm dừng vì bảng nâng cấp
-    const showPill = game.pause.onlyAuto && game.state === 'playing'; if (showPill !== this.pillShown) { this.pillShown = showPill; this.pillBg.clear(); this.pillIco.setVisible(showPill); this.pillTx.setVisible(showPill); if (showPill) { const { width } = this.scale, w = this.pillTx.width + 38, x = width / 2 - w / 2, y = this.hy + 28; glassPanel(this.pillBg, x, y, w, 24, 12, { alpha: 0.92 }); this.pillIco.setPosition(x + 14, y + 12).setDisplaySize(14, 14); this.pillTx.setPosition(x + 26, y + 5); } }
     this.setBtn.setState({ alpha: 1 }); this.camBtn.setState({ alpha: 1 });
     this.goldRect = this.hud.goldRect; this.goldZone.setPosition(this.goldRect.x, this.goldRect.y).setSize(this.goldRect.w, this.goldRect.h);
     if (dir.wave < total && cdn <= 5 && cdn > 0) { this.warn.setText(`⚠ ĐỢT ${nextWave} SẮP TỚI: ${cdn}s`).setVisible(true).setScale(1 + 0.06 * Math.sin(this.time.now / 90)); if (cdn !== this.lastWarn) { this.lastWarn = cdn; audio.play('warn'); } } else { this.warn.setVisible(false); this.lastWarn = -1; }

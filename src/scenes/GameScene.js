@@ -204,7 +204,7 @@ export class GameScene extends Phaser.Scene {
   // --- KÉO BẢN ĐỒ bằng 1 ngón: chạm bình thường vẫn chọn tháp/tường (xử lý khi NHẤC tay nếu chưa kéo); kéo quá ngưỡng thì cuộn camera, thả tay có quán tính nhẹ. ---
   // Không bắt đầu khi chạm vào UI/joystick, đang đặt tháp hoặc đang mở bảng. Camera ngừng bám nhân vật khi kéo; dùng joystick/nút "Về nhân vật" để quay lại.
   panDown(p) {
-    const ui = this.scene.get('UI'); if (ui?.isUiPointer?.(p) || this.player.dead || this.placing || this.pause.modalOpen || this.pan) return;
+    const ui = this.scene.get('UI'); if (ui?.claimsPointer?.(p) || this.player.dead || this.placing || this.pause.modalOpen || this.pan) return;
     this.pan = { id: p.id, x: p.x, y: p.y, sx: this.cameras.main.scrollX, sy: this.cameras.main.scrollY, drag: false, vx: 0, vy: 0, t: this.time.now, px: p.x, py: p.y };
   }
   panMove(p) {

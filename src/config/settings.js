@@ -14,6 +14,7 @@ export const DEFAULTS = {
   // 4 nhóm âm lượng ĐỘC LẬP: ambient = nhạc nền + môi trường (khóa cũ music/musicVol giữ nguyên để không mất cài đặt), tower, monster, character
   audio: { music: true, musicVol: 0.6, tower: true, towerVol: 0.85, monster: true, monsterVol: 0.85, character: true, characterVol: 0.85 },
   perf: { mode: DEFAULT_PERF_MODE, auto: true, adaptive: true }, // mode: saver|balanced|high; auto = còn dùng gợi ý theo thiết bị (tắt khi người chơi tự chọn); adaptive = bộ điều tiết tự động
+  controls: { floatingJoystick: false },                         // joystick nổi (xuất hiện dưới ngón); mặc định: cố định
   haptics: { enabled: true },                                    // rung khi nhân vật mất máu
   display: { orientation: 'portrait', ratio: 'full', view: VIEW_PRESETS.near },
   gameplay: { autoPause: true },                    // tự tạm dừng khi mở bảng nâng cấp tháp / chọn nhánh kỹ năng
@@ -30,7 +31,7 @@ export function migrate(raw) {
 }
 function sanitize(o) {
   for (const k of ['music', 'tower', 'monster', 'character']) { o.audio[k] = !!o.audio[k]; const vk = k + 'Vol'; o.audio[vk] = clamp(+o.audio[vk] || 0, 0, 1); }
-  if (!PERF_MODES.includes(o.perf.mode)) o.perf.mode = DEFAULT_PERF_MODE; o.perf.auto = !!o.perf.auto; o.perf.adaptive = !!o.perf.adaptive; o.haptics.enabled = !!o.haptics.enabled;
+  if (!PERF_MODES.includes(o.perf.mode)) o.perf.mode = DEFAULT_PERF_MODE; o.perf.auto = !!o.perf.auto; o.perf.adaptive = !!o.perf.adaptive; o.haptics.enabled = !!o.haptics.enabled; o.controls.floatingJoystick = o.controls.floatingJoystick === true;
   if (!['portrait', 'landscape', 'auto'].includes(o.display.orientation)) o.display.orientation = DEFAULTS.display.orientation;
   if (!(o.display.ratio in RATIOS)) o.display.ratio = 'full';
   o.display.view = clamp(+o.display.view || VIEW_PRESETS.near, VIEW_RANGE.min, VIEW_RANGE.max);

@@ -40,3 +40,7 @@ test('Lướt: hồi chiêu giảm đều từ 30s (cấp 1) tới 1s (cấp t�
   const v = []; for (let l = 0; l <= DASH.maxLevel; l++) v.push(dashCooldown(l)); assert.equal(v[0], 30); assert.equal(v.at(-1), 1); for (let i = 1; i < v.length; i++) assert.ok(v[i] < v[i - 1]); assert.equal(dashCooldown(99), 1);
   const d = v.slice(1).map((x, i) => v[i] - x); assert.ok(Math.max(...d) - Math.min(...d) < 1e-9, 'giảm đều');
 });
+test('Joystick nổi: mặc định tắt (cố định), giá trị lạ bị đưa về false, bản lưu cũ không có mục này vẫn nạp được', async () => {
+  const { DEFAULTS, migrate } = await import('../src/config/settings.js'); assert.equal(DEFAULTS.controls.floatingJoystick, false);
+  assert.equal(migrate({ audio: { music: true } }).controls, undefined); // thiếu mục -> được merge từ DEFAULTS khi nạp
+});

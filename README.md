@@ -186,3 +186,6 @@ Lối chơi (tốc độ, sát thương, spawn, cân bằng) **giống hệt** �
 - **Nút kỹ năng & joystick**: kính mờ, viền vàng mảnh, icon rõ. Joystick **nổi** (chạm nửa dưới-trái là xuất hiện dưới ngón), đế trượt theo ngón, vùng chết 8%, thả thì mờ đi và về chỗ cũ. Camera bám nhân vật theo thời gian (không phụ thuộc FPS) và sprite không còn bị làm tròn theo pixel nên bớt khựng.
 - **HUD nhân vật** (`src/ui/PlayerHud.js`): avatar viền theo màu áo, tên, tim, chip vàng/đợt/quái, font Montserrat; avatar thở nhẹ, chớp đỏ khi mất máu, tim và số vàng nảy khi đổi.
 - **Bảng nâng cấp tháp**: danh sách một cột, giá trị hiện tại và giá trị sau nâng cấp có cột riêng nên không tràn; bảng tự đặt ngay trên hàng nút và cuộn được nếu thiếu chỗ.
+
+### Joystick nổi (Cài đặt → Màn hình → Điều khiển)
+Mặc định là joystick **cố định** ở góc dưới-trái. Bật "Joystick nổi" để đế joystick xuất hiện ngay dưới ngón khi chạm vùng thuận tay trái và trượt theo ngón khi kéo xa. Vùng kích hoạt: màn **ngang** giữ nguyên (nửa trái, từ 38% chiều cao xuống đáy); màn **dọc** là nửa trái và chỉ 40% dưới cùng của màn hình. Lựa chọn được lưu (`controls.floatingJoystick`).

@@ -63,7 +63,9 @@ export function initSettingsPanel({ onToggle, onCopy, onPause, onMenu }) {
   const ratioLbl = el('small', '', 'Tỷ lệ khung khi chơi ngang'), ratio = seg([['19.5:9', '19.5:9'], ['16:9', '16:9'], ['full', 'Toàn màn hình']], () => settings.data.display.ratio, (v) => settings.set({ display: { ratio: v } })), note = el('small'); note.style.color = '#ffcf6b'; gd.append(orient, ratioLbl, ratio, note);
   const gc = group('eye', 'Tầm nhìn camera', 'Số ô nhìn thấy theo cạnh ngắn màn hình.'); const presets = seg([['near', 'Gần'], ['far', 'Xa'], ['wide', 'Rộng']], () => viewPresetOf(settings.data.display.view), (v) => { settings.set({ display: { view: VIEW_PRESETS[v] } }); refresh(); });
   gc.append(presets, slider('eye', 'Tầm nhìn', VIEW_RANGE.min, VIEW_RANGE.max, VIEW_RANGE.step, () => settings.data.display.view, (v) => { settings.set({ display: { view: v } }); presets.redraw(); }, (v) => v.toFixed(1) + ' ô', { mini: true }));
-  panes.screen = el('div', 'pane'); panes.screen.append(gd, gc);
+  const gj = group('target', 'Điều khiển', 'Joystick cố định ở góc dưới-trái (mặc định). Bật "nổi" để joystick xuất hiện ngay dưới ngón khi chạm vùng thuận tay trái.');
+  gj.append(toggle('target', 'Joystick nổi', 'Màn ngang: nửa trái; màn dọc: nửa trái, 40% dưới cùng', () => settings.data.controls.floatingJoystick, (v) => settings.set({ controls: { floatingJoystick: v } })));
+  panes.screen = el('div', 'pane'); panes.screen.append(gd, gc, gj);
   // ---------- tab Hình ảnh ----------
   const gf = group('water', 'Hiệu ứng môi trường', 'Tắt để tiết kiệm pin; hình nền tĩnh vẫn được giữ.'); gf.append(
     toggle('water', 'Hiệu ứng nước', 'Gợn sóng và ánh phản chiếu trên sông, hồ, biển', () => settings.data.fx.water, (v) => settings.set({ fx: { water: v } })),
