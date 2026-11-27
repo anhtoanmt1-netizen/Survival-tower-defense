@@ -11,6 +11,7 @@ import { generateMap, parseMapId } from '../map/index.js';
 import { Grid } from '../map/grid.js';
 import { preloadWorldAssets, smoothWorldTextures, ObjectLayer, Ambient } from '../render/world.js';
 import { WaterFx, createWaterTextures } from '../render/waterFx.js';
+import { LotusLayer } from '../render/lotusLayer.js';
 import { GrassLayer, GRASS_KEYS, createGrassTextures } from '../render/grassLayer.js';
 import { TextureGrader, isIdentity } from '../render/mapGrade.js';
 import { createFxTextures } from '../render/towerTextures.js';
@@ -33,7 +34,7 @@ import { TOWER_DISPLAY, WALL_DISPLAY } from '../config/art.js';
 import { Effects } from '../systems/Effects.js';
 import { Panels } from '../ui/panels.js';
 import { mulberry32 } from '../core/rng.js';
-const TS = GAME_CONFIG.tileSize;
+const TS = GAME_CONFIG.tileSize, PAN_SLOP = 12; // px kéo tối thiểu để tính là kéo (không phải chạm)
 const KIND_COLOR = { arrow: 0xe8e4d8, ice: 0x8fd0ff, fire: 0xff8a2a };
 export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
@@ -42,7 +43,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     const diff = (this.diff = getDifficulty(this.opts.difficulty)), map = (this.map = generateMap(this.opts.mapId)); this.grid = new Grid(map);
     smoothWorldTextures(this); createFxTextures(this); createWaterTextures(this); createGrassTextures(this); this.grader = new TextureGrader(this);
-    this.ground = new TerrainRenderer(this, map, settings.data.grade); this.objects = new ObjectLayer(this, map); this.ambient = new Ambient(this, this.objects); this.water = new WaterFx(this, map); this.grass = new GrassLayer(this, map);
+    this.ground = new TerrainRenderer(this, map, settings.data.grade); this.objects = new ObjectLayer(this, map); this.ambient = new Ambient(this, this.objects); this.water = new WaterFx(this, map); this.lotus = new LotusLayer(this, map); this.grass = new GrassLayer(this, map);
     const rng = mulberry32((Date.now() ^ map.seed) >>> 0), s = map.playerStart;
     this.economy = new Economy({ ...ECON, startGold: diff.startGold, safetyIncome: diff.safetyIncome }); this.fx = new Effects(this); this.renderer = new MonsterRenderer(this, this.fx);
     this.world = new MonsterWorld(this.grid, {
@@ -88,7 +89,7 @@ export class GameScene extends Phaser.Scene {
       },
     } });
     this.towerView = new TowerRenderer(this, this.ts, this.fx); this.wallView = new WallRenderer(this, this.ts, this.fx); this.wallArm = null;
-    this.selected = null; this.placing = null; this.pause = new PauseState(() => settings.data.gameplay.autoPause); this.refT = 0; this.state = 'playing'; this.playTime = 0; this.peeking = false;
+    this.selected = null; this.placing = null; this.pause = new PauseState(() => settings.data.gameplay.autoPause); this.refT = 0; this.state = 'playing'; this.playTime = 0; this.peeking = false; this.pan = null; this.flingX = this.flingY = 0;
     this.panels = new Panels({
       ts: this.ts, economy: this.economy, close: () => this.select(null), onModal: (open) => { this.pause.set('skill', open); },
       upgrade: (t) => { const r = this.ts.upgrade(t); if (!r.ok) return this.panels.toast(r.message); audio.play('upgrade'); this.fx.ring(t.x * TS + TS, t.y * TS + TS, 0xffd24a, 6, 34, 0.4); this.fx.float(t.x * TS + TS, t.y * TS - 26, 'LV' + t.level, '#ffffff'); this.panels.refresh(); if (t.pending > 0) this.panels.showSkill(t); },
@@ -106,9 +107,9 @@ export class GameScene extends Phaser.Scene {
     audio.setMusic('calm'); this.musicT = 0;
     this.scene.launch('UI', { map, player: this.player, camera: cam, game: this });
     this.scene.bringToTop('UI'); // UI luôn nằm trên cùng, nhận chạm trước
-    this.input.on('pointerdown', this.onTap, this);
-    this.input.on('pointermove', (p) => { if (this.placing && p.id === this.placing.id) this.updateGhost(p); });
-    this.input.on('pointerup', this.endPlacement, this); this.input.on('pointerupoutside', this.endPlacement, this);
+    this.input.on('pointerdown', this.panDown, this);
+    this.input.on('pointermove', (p) => { if (this.placing && p.id === this.placing.id) this.updateGhost(p); else this.panMove(p); });
+    this.input.on('pointerup', (p) => { this.endPlacement(p); this.panUp(p); }); this.input.on('pointerupoutside', (p) => { this.endPlacement(p); this.panUp(p); });
     const k = this.input.keyboard; this.keys = k.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT'); k.on('keydown-SPACE', () => this.useDash()); k.on('keydown-SHIFT', () => this.useDash());  // Dash cho bàn phím
     if (this.opts.debug) { // phím debug cho dev: ?debug=1
       k.on('keydown-H', () => this.player.hurt()); k.on('keydown-B', () => this.player.startBuild()); k.on('keydown-K', () => this.player.die());
@@ -152,7 +153,7 @@ export class GameScene extends Phaser.Scene {
     const cost = Math.round(speedUpgradeCost(lv) * this.diff.upgradeMul); if (!this.economy.spend(cost)) return this.panels.toast(`Không đủ vàng (cần ${cost}).`);
     this.player.speedLevel++; audio.play('speed'); this.fx.float(this.player.x * TS, this.player.y * TS - 40, 'Tốc độ LV' + this.player.speedLevel, '#8dff8d'); this.panels.toast(`Tốc độ chạy LV${this.player.speedLevel} (+${Math.round(SPEED_UPGRADE.perLevel * this.player.speedLevel * 100)}%)`, 'ok');
   }
-  peekAt(tx, ty) { const cam = this.cameras.main; cam.stopFollow(); cam.pan(tx * TS + 16, ty * TS + 16, 350, 'Sine.easeOut'); this.peeking = true; }
+  peekAt(tx, ty) { const cam = this.cameras.main; this.flingX = this.flingY = 0; this.peekT = this.time.now; cam.stopFollow(); cam.pan(tx * TS + 16, ty * TS + 16, 350, 'Sine.easeOut'); this.peeking = true; }
   followPlayer() { this.cameras.main.startFollow(this.player.sprite, true, 0.15, 0.15); this.peeking = false; }
   // Chỉnh màu cảnh quan: gộp nhiều lần kéo thanh trượt (120ms) rồi ghép lại nền + đổi texture vật thể. UI/nhân vật/tháp/quái KHÔNG bị ảnh hưởng.
   queueGrade() { this.gradeTimer?.remove(); this.gradeTimer = this.time.delayedCall(90, () => this.applyGrade()); }
@@ -200,6 +201,28 @@ export class GameScene extends Phaser.Scene {
     const r = pl.kind === 'wall' ? this.ts.buildWall(pl.tile.x, pl.tile.y, [this.player]) : this.ts.build(pl.tile.x, pl.tile.y, [this.player]);
     if (!r.ok) this.panels.toast(r.message);
   }
+  // --- KÉO BẢN ĐỒ bằng 1 ngón: chạm bình thường vẫn chọn tháp/tường (xử lý khi NHẤC tay nếu chưa kéo); kéo quá ngưỡng thì cuộn camera, thả tay có quán tính nhẹ. ---
+  // Không bắt đầu khi chạm vào UI/joystick, đang đặt tháp hoặc đang mở bảng. Camera ngừng bám nhân vật khi kéo; dùng joystick/nút "Về nhân vật" để quay lại.
+  panDown(p) {
+    const ui = this.scene.get('UI'); if (ui?.isUiPointer?.(p) || this.player.dead || this.placing || this.pause.modalOpen || this.pan) return;
+    this.pan = { id: p.id, x: p.x, y: p.y, sx: this.cameras.main.scrollX, sy: this.cameras.main.scrollY, drag: false, vx: 0, vy: 0, t: this.time.now, px: p.x, py: p.y };
+  }
+  panMove(p) {
+    const a = this.pan; if (!a || a.id !== p.id) return; const cam = this.cameras.main;
+    if (!a.drag) { if (Math.hypot(p.x - a.x, p.y - a.y) < PAN_SLOP) return; a.drag = true; this.peeking = true; cam.stopFollow(); if (cam.panEffect?.isRunning) cam.panEffect.reset(); this.select(null); this.disarmWall(); }
+    const now = this.time.now, dtm = Math.max(1, now - a.t) / 1000, z = cam.zoom; cam.scrollX = a.sx - (p.x - a.x) / z; cam.scrollY = a.sy - (p.y - a.y) / z;
+    a.vx = a.vx * 0.6 + ((a.px - p.x) / z / dtm) * 0.4; a.vy = a.vy * 0.6 + ((a.py - p.y) / z / dtm) * 0.4; a.t = now; a.px = p.x; a.py = p.y;
+  }
+  panUp(p) {
+    const a = this.pan; if (!a || a.id !== p.id) return; this.pan = null;
+    if (!a.drag) { this.onTap(p); return; }                       // chạm ngắn: hành vi cũ (chọn tháp / tường)
+    if (this.time.now - a.t < 90) { this.flingX = Phaser.Math.Clamp(a.vx, -1500, 1500); this.flingY = Phaser.Math.Clamp(a.vy, -1500, 1500); } // còn đang trượt khi nhấc tay → quán tính
+  }
+  panFling(real) {
+    if (this.pan || (!this.flingX && !this.flingY)) return; const cam = this.cameras.main;
+    cam.scrollX += this.flingX * real; cam.scrollY += this.flingY * real; const k = Math.exp(-real * 7); this.flingX *= k; this.flingY *= k;
+    if (Math.hypot(this.flingX, this.flingY) < 8) this.flingX = this.flingY = 0;
+  }
   onTap(p) {
     const ui = this.scene.get('UI'); if (ui?.isUiPointer?.(p) || this.player.dead || this.placing || this.pause.modalOpen) return;
     const w = p.positionToCamera(this.cameras.main), tx = Math.floor(w.x / TS), ty = Math.floor(w.y / TS), fy = w.y / TS - ty;
@@ -226,6 +249,8 @@ export class GameScene extends Phaser.Scene {
     let vec = ui?.joystick?.vec;
     const kx = (K.D.isDown || K.RIGHT.isDown ? 1 : 0) - (K.A.isDown || K.LEFT.isDown ? 1 : 0), ky = (K.S.isDown || K.DOWN.isDown ? 1 : 0) - (K.W.isDown || K.UP.isDown ? 1 : 0);
     if (kx || ky) { this.kv.set(kx, ky).normalize(); vec = this.kv; } this.lastVec = vec;
+    { const k = 1 - Math.exp(-real * 20); this.cameras.main.lerp.set(k, k); } // camera bám nhân vật theo THỜI GIAN (không phụ thuộc số khung/giây) → hết giật khi FPS dao động
+    this.panFling(real); if (this.peeking && !this.pan && vec && (Math.abs(vec.x) > 0.25 || Math.abs(vec.y) > 0.25) && this.time.now - (this.peekT || 0) > 400) this.followPlayer(); // di chuyển lại → camera tự quay về nhân vật
     const frozen = this.pause.frozen, sim = real * this.speed;
     if (!frozen && this.state === 'playing') { // bảng chọn nhánh / tạm dừng / kết thúc: dừng mô phỏng. Chia nhỏ bước (≤0,05s) để x2/x3 không bỏ sót va chạm, sự kiện hay spawn.
       this.hurtFlag = false; this.hurtVib = null; const n = subSteps(sim), h = sim / n; for (let i = 0; i < n && this.state === 'playing'; i++) this.stepSim(h, vec);
@@ -233,6 +258,7 @@ export class GameScene extends Phaser.Scene {
     } else this.player.update(0, null);
     const cam = this.cameras.main, F2 = settings.data.fx; this.fx.flashes = 0; this.ground.update(cam);
     this.ambDt += real; if (perf.due(0)) { const d = this.ambDt; this.ambDt = 0; this.objects.update(d, cam); this.ambient.update(d, this.fx.density * perf.p.leaf); this.water.update(d, cam, F2.water, this.fx.density * perf.p.water); } // cảnh quan thưa nhịp theo chế độ hiệu năng (dt cộng dồn => đúng tốc độ), vẫn sống động kể cả khi tạm dừng
+    this.lotus.update(real, cam, F2.water); // hoa sen lay theo gió (cùng công tắc hiệu ứng nước)
     this.grass.update(real, cam, frozen ? null : this.player, F2.grass); // cỏ tự quản lý nhịp; chỉ nghiêng khi nhân vật đang chạy
     const anim = frozen ? 0 : sim; this.fx.update(real); this.dashFx.update(real); this.renderer.sync(this.world.monsters, anim, cam); this.towerView.sync(anim, this.selected); this.wallView.sync(anim);
     this.musicT -= real; if (this.musicT <= 0 && this.state === 'playing') { this.musicT = 1; const hot = this.world.active > 22 || this.director.currentSpec?.boss && this.world.active > 6; audio.setMusic(hot ? 'battle' : 'calm'); }

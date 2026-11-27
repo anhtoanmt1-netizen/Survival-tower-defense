@@ -79,7 +79,7 @@ export class Player {
       let vx = 0, vy = 0, speed = GAME_CONFIG.player.walkSpeed, moving = false;
       const jl = joy ? Math.hypot(joy.x, joy.y) : 0; // chỉ di chuyển bằng joystick / WASD (đã bỏ chạm màn hình để đi)
       if (this.buildT <= 0) {   // đang đóng búa (xây) thì đứng yên
-        if (jl > 0.15) { vx = joy.x / jl; vy = joy.y / jl; speed = this.moveSpeed(); moving = true; /* luôn chạy hết tốc độ, rê nhẹ cũng không đi chậm */ }
+        if (jl > 0.05) { vx = joy.x / jl; vy = joy.y / jl; speed = this.moveSpeed(); moving = true; /* luôn chạy hết tốc độ, rê nhẹ cũng không đi chậm */ }
         if (moving) {
           const s = speed * dt;
           const ox = this.x, oy = this.y;
@@ -95,8 +95,8 @@ export class Player {
     if (this.hurtT > 0) this.hurtT = Math.max(0, this.hurtT - dt);
     if (this.dead) { this.dieT += dt; const k = Math.min(1, this.dieT / 0.4); this.sprite.setAngle(80 * k * (this.dir === 'left' ? -1 : 1)); by = 7 * k; } else if (this.sprite.angle) this.sprite.setAngle(0);
     this.advanceAnim(dt); this.sprite.setFrame(`${this.dir}_${this.frame}`); this.vx = mvx; this.vy = mvy; this.lastJoy = joy;
-    this.sprite.setPosition(Math.round(this.x * TS), Math.round(this.y * TS + by)).setScale(PLAYER_DISPLAY.scale * sx, PLAYER_DISPLAY.scale * sy).setDepth(this.y * TS);
-    this.shadow.setPosition(this.sprite.x, Math.round(this.y * TS) - 1).setDepth(this.y * TS - 0.5).setAlpha(this.dead ? 0.3 : 0.55);
+    this.sprite.setPosition(this.x * TS, this.y * TS + by).setScale(PLAYER_DISPLAY.scale * sx, PLAYER_DISPLAY.scale * sy).setDepth(this.y * TS);
+    this.shadow.setPosition(this.sprite.x, this.y * TS - 1).setDepth(this.y * TS - 0.5).setAlpha(this.dead ? 0.3 : 0.55);
     const ph = this.skills.isActive('phase'), iv = this.skills.isActive('invincible');
     this.sprite.setAlpha((ph ? 0.55 : 1) * (this.dead ? 0.85 : 1) * (this.invuln > 0 && !this.dead ? (Math.floor(this.invuln * 12) % 2 ? 0.6 : 1) : 1));
     if (ph) this.sprite.setTint(this.skills.remainingActive('phase') < 1 && Math.floor(this.skills.remainingActive('phase') * 8) % 2 ? 0xffb0b0 : 0x9ad0ff); else if (iv) this.sprite.setTint(0xfff0a0); else this.sprite.clearTint();

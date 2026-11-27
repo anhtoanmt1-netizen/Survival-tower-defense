@@ -26,7 +26,7 @@ export class Panels {
     const put = (id, k, v) => this.put(id, k, v), t = this.t, ts = this.ctl.ts, eco = this.ctl.economy, T = TOWER_TYPES[t.type], up = ts.upgradeInfo(t), s = t.stats;
     put('tname', 'textContent', T.name); put('tlv', 'textContent', 'LV ' + t.level + (t.level >= T.maxLevel ? ' · MAX' : ''));
     put('tstats', 'innerHTML', ROWS.map(([icn, name, fn]) => {
-      const a = fn(s), b = up.ok ? fn(up.after) : a; return `<div class="stat">${ic(icn)}<span>${name}</span><b>${a}${b !== a ? ` <i>→ ${b}</i>` : ''}</b></div>`;
+      const a = fn(s), b = up.ok ? fn(up.after) : a; return `<div class="stat">${ic(icn)}<span>${name}</span><b>${a}</b>${b !== a ? `<i>→ ${b}</i>` : ''}</div>`;
     }).join('') + `<div class="stat wide">${ic('coin')}<span>Tổng đầu tư</span><b>${t.invested}</b></div>`);
     const sk = []; if (s.slowPct) sk.push(`${ic('snow', 12)} Làm chậm ${Math.round(s.slowPct * 100)}% / ${f(s.slowDur)}s${s.slowRadius ? ', lan ' + f(s.slowRadius) + ' ô' : ''}`);
     if (s.burnDps) sk.push(`${ic('flame', 12)} Cháy ${f(s.burnDps, 0)}/s trong ${f(s.burnDur)}s${s.spreadChance ? `, lan lửa ${Math.round(s.spreadChance * 100)}%` : ''}`);

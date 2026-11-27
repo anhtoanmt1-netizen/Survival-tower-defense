@@ -19,11 +19,13 @@ export const TOWER_FLAME_BLUE = 5;                // 6 hình: 0 (LV1-4), 1 (LV5)
 export const TOWER_STAGE_LEVELS = [5, 7, 9, 12, 15];
 export const towerStage = (level) => TOWER_STAGE_LEVELS.filter((l) => level >= l).length;
 export const GRASS_SPRITES = 9;   // grass_0..8.png: cắt từ tools/src/grass.png bằng tools/build_grass_assets.py
+export const LOTUS_COUNT = 7;     // lotus_0..6.png: cắt từ tools/src/hoasen.png bằng tools/build_lotus_assets.py
 export function assetManifest() {
   const img = [];
   for (let i = 0; i < 9; i++) img.push([`tree_${i}`, `trees/tree_${i}.png`]);
   for (let i = 0; i < 6; i++) img.push([`tower_${i}`, `towers/tower_${i}.png`]);
   img.push(['wall', 'wall/wall.png'], ['main_sheet', 'player/main_sheet.png'], ['main_base', 'player/main_base.png'], ['main_hair', 'player/main_hair.png']);
   for (let i = 0; i < GRASS_SPRITES; i++) img.push([`grass_img_${i}`, `grass/grass_${i}.png`]);
+  for (let i = 0; i < LOTUS_COUNT; i++) img.push([`lotus_${i}`, `lotus/lotus_${i}.png`]);
   return img;
 }

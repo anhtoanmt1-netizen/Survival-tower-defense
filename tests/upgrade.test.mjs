@@ -14,15 +14,16 @@ import { patternFor, vibrate, resetHapticsForTest } from '../src/platform/haptic
 import { canRegister } from '../src/platform/pwa.js';
 import { SKILLS } from '../src/config/skills.js';
 
-test('Dash: hồi chiêu gốc 60s, nâng cấp có giới hạn cứng', () => {
-  const d = new DashSkill(); assert.equal(d.cooldown, 60); assert.ok(d.start(1, 0)); assert.equal(d.cd, 60); assert.equal(d.can(), false);
+test('Dash: hồi chiêu cấp 1 = 30s, giảm dần mỗi cấp tới 1s ở cấp cao nhất, nâng cấp có giới hạn cứng', () => {
+  const d = new DashSkill(); assert.equal(d.cooldown, 30); assert.ok(d.start(1, 0)); assert.equal(d.cd, 30);
+  const seq = []; { const e = new DashSkill(); do seq.push(e.cooldown); while (e.upgrade()); seq.push(e.cooldown); } assert.equal(seq[0], 30); assert.equal(seq.at(-1), 1); assert.ok(seq.every((v, i) => i === 0 || v <= seq[i - 1])); assert.equal(d.can(), false);
   while (!d.maxed) assert.ok(d.upgrade()); assert.equal(d.upgrade(), false);
   assert.ok(dashCooldown(99) >= DASH.minCooldown); assert.ok(dashDistance(99) <= DASH.maxDistance); assert.equal(d.upgradeCost(), Infinity);
 });
 test('Dash: chỉ lướt khi hết hồi, hướng 0 bị từ chối, kết thúc gọi callback, hồi chiêu chạy theo thời gian game', () => {
   const d = new DashSkill(); assert.equal(d.start(0, 0), false); assert.ok(d.start(0, 3)); assert.equal(d.dy, 1);
   let ended = 0; d.update(DASH.duration + 0.01, () => ended++); assert.equal(ended, 1); assert.equal(d.active, false);
-  d.update(59, () => {}); assert.equal(d.can(), false); d.update(1.1, () => {}); assert.ok(d.can());
+  d.update(29, () => {}); assert.equal(d.can(), false); d.update(1.1, () => {}); assert.ok(d.can());
 });
 test('Dash: không xuyên tường mỏng dù bước dt lớn', () => {
   const wall = (x) => x >= 5 && x < 5.2, hit = (x, y) => wall(x);

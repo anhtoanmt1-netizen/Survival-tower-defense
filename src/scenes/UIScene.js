@@ -1,6 +1,8 @@
 import { settings, VIEW_PRESETS, viewPresetOf } from '../config/settings.js';
 import Phaser from 'phaser';
 import { glassPanel } from '../ui/glass.js';
+import { PlayerHud } from '../ui/PlayerHud.js';
+import { computeActionRow } from '../ui/actionRow.js';
 import { Joystick } from '../input/Joystick.js';
 import { ActionButton } from '../ui/ActionButton.js';
 import { DASH } from '../config/skills.js';
@@ -44,8 +46,8 @@ export class UIScene extends Phaser.Scene {
     this.mmBack.on('pointerdown', () => { audio.play('click'); game.followPlayer(); }); this.mmShrink.on('pointerdown', () => { audio.play('close'); this.expanded = false; this.layout(); });
     // --- HUD: khung nền bo góc + chữ + thanh đếm ngược đợt ---
     // HUD: chỉ chữ, nền trong suốt (viền chữ đen giữ cho dễ đọc trên mọi nền)
-    const T14 = { ...TXT, fontStyle: '800', fontSize: '15px', strokeThickness: 4 }, T11 = { ...TXT, fontStyle: '700', fontSize: '11px', strokeThickness: 3, color: '#e8efe3' }, I = (k, tint) => S(this.add.image(0, 0, 'ui_icon_' + k).setDepth(1000).setTint(tint));
-    this.hearts = []; this.icoCoin = I('coin', 0xffd24a); this.txGold = S(this.add.text(0, 0, '', T14).setDepth(1000)); this.icoFlag = I('flag', 0x9ad8ff); this.txWave = S(this.add.text(0, 0, '', T14).setDepth(1000)); this.icoSlime = I('slime', 0x8be07a); this.txSlime = S(this.add.text(0, 0, '', T14).setDepth(1000)); this.txNext = S(this.add.text(0, 0, '', T11).setDepth(1000)); this.txInfo = S(this.add.text(0, 0, '', T11).setDepth(1000));
+    const I = (k, tint) => S(this.add.image(0, 0, 'ui_icon_' + k).setDepth(1000).setTint(tint));
+    this.hud = new PlayerHud(this, { name: this.d.player.name, shirt: this.d.player.shirt }); // HUD nhân vật: avatar, tên, tim, chip vàng/đợt/quái
     this.pillBg = S(this.add.graphics().setDepth(1050)); this.pillIco = I('pause', 0xffffff).setDepth(1051); this.pillTx = S(this.add.text(0, 0, 'Tạm dừng khi nâng cấp', { ...TXT, fontSize: '11px', fontStyle: '700', strokeThickness: 3 }).setDepth(1051)); this.pillShown = false;
     this.setBtn = new ActionButton(this, { color: 0x3a5a48, iconKey: 'ui_icon_gear', onTap: () => { audio.play('open'); game.opts.openSettings?.(); } });
     // Nút TẦM NHÌN CAMERA (cạnh minimap, cùng kích thước/kiểu với nút Cài đặt): chạm để đổi vòng Gần -> Xa -> Rộng; cùng giá trị với mục "Tầm nhìn camera" trong Cài đặt
@@ -142,18 +144,22 @@ export class UIScene extends Phaser.Scene {
     this.mmBack.setPosition(this.mmX, this.mmY + Z + 8); this.mmShrink.setPosition(this.mmX - this.mmBack.width - 8, this.mmY + Z + 8);
     this.hx = ins.left + 12; this.hy = ins.top + 10; this.banner.setPosition(width / 2, height * 0.3); this.warn.setPosition(width / 2, ins.top + 12);
     const rs = 17 * u; this.setBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs + 2, rs, -1, 0); ; this.camBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs * 3 + 10, rs, -1, 0); this.spdBtn.layout(this.mmX - Z - 8 - rs - 2, this.mmY + rs * 5 + 18, rs, -1, 0); // nút cài đặt + nút camera xếp dọc ngay cạnh minimap
+    this.hud.layout(this.hx, this.hy, this.mmX - Z - 8 - rs * 2 - 16); // HUD kết thúc trước cột nút cạnh minimap; chip tự xuống dòng khi hẹp
     this.joystick.layout(u);
-    const rb = 36 * u, bx = width - ins.right - 24 - rb, by = height - ins.bottom - 24 - rb;
-    this.btn.layout(bx, by, rb, -5 * u, 0); this.btnT.setPosition(bx, by + 17 * u);
-    // 4 nút kỹ năng xếp cung tròn quanh nút XÂY (bán kính 96u): Bất tử · Lướt · Xuyên vật · Tốc độ; nút "+" nhỏ nâng cấp Lướt đặt cạnh nút Lướt
-    const R = 96 * u, at = (deg) => [bx + R * Math.cos(deg * Math.PI / 180), by - R * Math.sin(deg * Math.PI / 180)], rk = 27 * u;
-    this.sk.invincible.layout(...at(185), rk); this.sk.dash.layout(...at(153), rk); this.sk.phase.layout(...at(121), rk); this.sk.speed.layout(...at(89), 25 * u, -7 * u, 14 * u);
-    { const [dx, dy] = at(153); this.dashUp.layout(dx - 25 * u, dy - 26 * u, 12.5 * u, -1, 18 * u); }
-    this.mx0 = Math.min(bx + rb - this.MW / 2, width - ins.right - 8 - this.MW / 2); this.my0 = by - 96 * u - 25 * u - 14 - this.MH / 2; this.layoutMenu();
+    // HÀNG KỸ NĂNG NẰM NGANG: XÂY (góc dưới-phải) rồi Bất tử · Lướt · Xuyên vật · Tốc độ nối tiếp sang TRÁI, cách đều. Vừa chỗ cạnh joystick thì đặt ngang hàng; màn hẹp thì cả hàng
+    // được nâng lên ngay trên joystick (vẫn một hàng, vẫn bắt đầu từ XÂY) và nếu vẫn chật thì thu nhỏ đều các nút (không bao giờ chồng nhau).
+    const J = this.joystick, row = computeActionRow({ width, height, u, insets: ins, joyRight: J.rx + J.R * 1.05 + 10, joyTop: J.ry - J.R * 1.05 - 8 }), { rb, rk, sc, bx, y: by } = row; this.rowY = by; this.rowLifted = row.lifted;
+    this.btn.layout(bx, by, rb, -5 * u * sc, 0); this.btnT.setPosition(bx, by + 17 * u * sc);
+    ['invincible', 'dash', 'phase', 'speed'].forEach((k, i) => { const sx = row.xs[i]; this.sk[k].layout(sx, by, rk, -6 * u * sc, 14 * u * sc); if (k === 'dash') this.dashUp.layout(sx - rk * 0.78, by - rk * 0.98, Math.max(9, 11.5 * u * sc), -1, 16 * u * sc); });
+    this.rowTop = by - Math.max(rb, rk);
+    try { document.documentElement.style.setProperty('--hud-bottom', Math.round(height - this.rowTop + 8) + 'px'); } catch { /* không có DOM */ } // bảng tháp (DOM) đặt ngay trên hàng nút
+    this.mx0 = Math.min(bx + rb - this.MW / 2, width - ins.right - 8 - this.MW / 2); this.my0 = this.rowTop - 22 * sc - 14 - this.MH / 2; this.layoutMenu();
   }
-  isUiPointer(p) {
+  // chạm có trúng nút/bảng nào (KHÔNG tính joystick) — joystick nổi dùng để không giành chạm của nút
+  hitsButtons(p) { return this.isUiPointer(p, true); }
+  isUiPointer(p, noJoy = false) {
     const inR = (x, y, w, h) => p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h, near = (b) => Math.hypot(p.x - b.hit.x, p.y - b.hit.y) <= b.hit.r + 8, S = this.mmSize;
-    return this.joystick.ownsPointer(p) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || near(this.setBtn) || near(this.camBtn) || near(this.spdBtn) || (this.dashUp.parts[0].visible && near(this.dashUp)) || inR(this.goldRect.x, this.goldRect.y, this.goldRect.w, this.goldRect.h) || Object.values(this.sk).some(near)
+    return (!noJoy && this.joystick.ownsPointer(p)) || inR(this.mmX - S, this.mmY, S, S) || near(this.btn) || near(this.setBtn) || near(this.camBtn) || near(this.spdBtn) || (this.dashUp.parts[0].visible && near(this.dashUp)) || inR(this.goldRect.x, this.goldRect.y, this.goldRect.w, this.goldRect.h) || Object.values(this.sk).some(near)
       || (this.buildOpen && inR(this.menuX - this.MW / 2, this.menuY - this.MH / 2, this.MW, this.MH)) || [this.mmBack, this.mmShrink].some((b) => b.visible && b.getBounds().contains(p.x, p.y));
   }
   drawMinimap(g, game, world, cam, player, x0, y0, sx, sy, ts) { // lớp động của minimap; vẽ thưa nhịp theo chế độ hiệu năng (đồ họa giữ nguyên, chỉ giảm số lần vẽ lại)
@@ -167,6 +173,7 @@ export class UIScene extends Phaser.Scene {
     g.fillStyle(Phaser.Display.Color.HexStringToColor(player.shirt).color, 1).fillCircle(x0 + player.x * sx, y0 + player.y * sy, this.expanded ? 4 : 3).lineStyle(1, 0xffffff, 1).strokeCircle(x0 + player.x * sx, y0 + player.y * sy, this.expanded ? 4 : 3);
   }
   update(_, ms) {
+    this.joystick.update(Math.min(0.05, ms / 1000));
     const { map, player, camera: cam, game } = this.d, S = this.mmSize, sx = S / map.width, sy = S / map.height, x0 = this.mmX - S, y0 = this.mmY, ts = 32;
     const dir = game.director, world = game.world, k = player.skills, diff = game.diff;
     // minimap động
@@ -183,7 +190,7 @@ export class UIScene extends Phaser.Scene {
       if (d.active) o.setState({ alpha: a, active: true, activeFrac: d.t / DASH.duration });
       else if (d.cd > 0) o.setState({ alpha: a * 0.85, cd: d.cd, cdFrac: d.cd / Math.max(1, d.cooldown), sub: fmtT(d.cd) });
       else { o.setState({ alpha: a, ready: !player.dead, sub: 'SẴN SÀNG', subColor: '#8dff8d' }); if (was) o.press = 1.22; }
-      this.dashWasCd = d.cd > 0; o.setBadge(d.level > 0 ? 'Lv' + d.level : '');
+      this.dashWasCd = d.cd > 0; o.setBadge('Lv' + (d.level + 1));
       const cost = d.upgradeCost(diff.upgradeMul), poor = game.economy.gold < cost; this.dashUp.setState({ alpha: d.maxed || poor ? 0.55 : 1, sub: d.maxed ? 'MAX' : String(cost), subColor: !d.maxed && !poor ? '#ffe9a0' : '#ffffff', ready: !d.maxed && !poor }); }
     { const sp = game.speed, o = this.spdBtn; if (o.ico.text !== 'X' + sp) o.ico.setText('X' + sp); o.setState({ alpha: 1, tint: sp === 1 ? 0x3a5a48 : sp === 2 ? 0xc98a2a : 0xc9462a, active: sp > 1, activeFrac: 1 }); }
     const lv = player.speedLevel, max = lv >= SPEED_UPGRADE.maxLevel, cost = Math.round(speedUpgradeCost(lv) * diff.upgradeMul), poor = game.economy.gold < cost;
@@ -196,16 +203,11 @@ export class UIScene extends Phaser.Scene {
     const total = WAVE_SETTINGS.totalWaves, cdn = Math.ceil(Math.max(0, dir.countdown));
     const nextWave = dir.wave + 1, ns = dir.wave < total ? dir.specFor(nextWave) : null, next = ns ? `${dir.wave === 0 ? 'Đợt đầu' : 'Đợt ' + nextWave} sau ${cdn}s (${ns.count} slime${ns.boss ? ', THỬ THÁCH' : ''})` : 'Đã xuất hiện đủ ' + total + ' đợt – diệt hết để thắng';
     // HUD: icon vector + số (nền trong suốt, chữ có viền)
-    while (this.hearts.length < player.maxHp) this.hearts.push(this.add.image(0, 0, 'ui_icon_heart').setScrollFactor(0).setDepth(1000));
-    const hx = this.hx, hy = this.hy, hs = 21; this.hearts.forEach((h, i) => { const full = i < player.hp; h.setPosition(hx + hs / 2 + i * (hs + 2), hy + hs / 2).setDisplaySize(hs, hs).setTint(full ? 0xff5a5a : 0x4a4a4a).setAlpha(full ? 1 : 0.5); });
-    const gx = hx + player.maxHp * (hs + 2) + 10; this.icoCoin.setPosition(gx + 10, hy + 11).setDisplaySize(21, 21); this.txGold.setPosition(gx + 24, hy + 1).setText(String(game.economy.gold));
-    this.icoFlag.setPosition(hx + 10, hy + 36).setDisplaySize(19, 19); this.txWave.setPosition(hx + 24, hy + 27).setText(`Đợt ${dir.wave}/${total}`);
-    const slx = hx + 24 + this.txWave.width + 14; this.icoSlime.setPosition(slx + 10, hy + 36).setDisplaySize(19, 19); this.txSlime.setPosition(slx + 24, hy + 27).setText(`${world.active}${dir.queue.length ? ' +' + dir.queue.length : ''}`);
-    this.txNext.setPosition(hx + 2, hy + 51).setText(next); this.txInfo.setPosition(hx + 2, hy + 65).setText(`${diff.name} · ${this.fpsText}`);
+    this.hud.setNext(next); this.hud.update(ms / 1000, { hp: player.hp, maxHp: player.maxHp, gold: game.economy.gold, wave: dir.wave, total, active: world.active, queue: dir.queue.length, dead: player.dead, info: diff.name, fps: this.fpsText });
     // nhãn gợi ý khi game đang tự tạm dừng vì bảng nâng cấp
     const showPill = game.pause.onlyAuto && game.state === 'playing'; if (showPill !== this.pillShown) { this.pillShown = showPill; this.pillBg.clear(); this.pillIco.setVisible(showPill); this.pillTx.setVisible(showPill); if (showPill) { const { width } = this.scale, w = this.pillTx.width + 38, x = width / 2 - w / 2, y = this.hy + 28; glassPanel(this.pillBg, x, y, w, 24, 12, { alpha: 0.92 }); this.pillIco.setPosition(x + 14, y + 12).setDisplaySize(14, 14); this.pillTx.setPosition(x + 26, y + 5); } }
     this.setBtn.setState({ alpha: 1 }); this.camBtn.setState({ alpha: 1 });
-    this.goldRect = { x: gx - 2, y: hy - 3, w: 24 + this.txGold.width + 8, h: 28 }; this.goldZone.setPosition(this.goldRect.x, this.goldRect.y).setSize(this.goldRect.w, this.goldRect.h);
+    this.goldRect = this.hud.goldRect; this.goldZone.setPosition(this.goldRect.x, this.goldRect.y).setSize(this.goldRect.w, this.goldRect.h);
     if (dir.wave < total && cdn <= 5 && cdn > 0) { this.warn.setText(`⚠ ĐỢT ${nextWave} SẮP TỚI: ${cdn}s`).setVisible(true).setScale(1 + 0.06 * Math.sin(this.time.now / 90)); if (cdn !== this.lastWarn) { this.lastWarn = cdn; audio.play('warn'); } } else { this.warn.setVisible(false); this.lastWarn = -1; }
     if (dir.wave !== this.lastWave) { this.lastWave = dir.wave; const s = dir.currentSpec; this.banner.setText(`ĐỢT ${dir.wave}${s.boss ? ' – THỬ THÁCH' : ''}\n${s.count} slime`).setAlpha(1); this.tweens.add({ targets: this.banner, alpha: 0, delay: 1500, duration: 600 }); audio.play(s.boss ? 'wave_boss' : 'wave_start'); }
     if (player.dead) this.banner.setText('BẠN ĐÃ BỊ HẠ').setAlpha(1);

@@ -1,20 +1,21 @@
 import Phaser from 'phaser';
 import { FONT } from '../config/ui.js';
-// Nút tròn có khung viền vàng, mặt màu, bóng đổ. Trạng thái: bình thường / nhấn (thu nhỏ) / kích hoạt (vòng sáng nhấp nháy) /
+// Nút tròn kiểu kính mờ: mặt nhuộm màu trong suốt nhẹ, viền vàng MẢNH, bóng mềm. Trạng thái: bình thường / nhấn (thu nhỏ) / kích hoạt (vòng sáng nhấp nháy) /
 // hồi chiêu (quạt tối + đếm giây) / vô hiệu (mờ). Dùng cho XÂY, kỹ năng, nâng tốc độ.
+const FACE_A = 0.8;   // độ đục của mặt kính
 export class ActionButton {
   // iconKey: texture icon vector (ui_icon_*) — đồng bộ với bộ icon DOM; icon: ký tự (dự phòng)
   constructor(scene, { color, icon = '', iconKey = null, onTap, depth = 1000, iconSize = 22 }) {
     this.scene = scene; this.r = 30; this.x = 0; this.y = 0; this.base = 1; this.press = 1; this.color = color; this.onTap = onTap; this.hit = { x: 0, y: 0, r: 30 };
     const A = (o) => o.setScrollFactor(0);
-    this.shadow = A(scene.add.image(0, 0, 'ui_face').setTint(0x000000).setAlpha(0.4).setDepth(depth - 1));
+    this.shadow = A(scene.add.image(0, 0, 'ui_glass').setTint(0x000000).setAlpha(0.28).setDepth(depth - 1));
     this.glow = A(scene.add.image(0, 0, 'ui_ring').setBlendMode(Phaser.BlendModes.ADD).setDepth(depth + 3).setAlpha(0).setTint(0xfff08a));
-    this.face = A(scene.add.image(0, 0, 'ui_face').setTint(color).setDepth(depth).setInteractive());
-    this.rim = A(scene.add.image(0, 0, 'ui_rim').setDepth(depth + 1));
+    this.face = A(scene.add.image(0, 0, 'ui_glass').setTint(color).setAlpha(FACE_A).setDepth(depth).setInteractive());
+    this.rim = A(scene.add.image(0, 0, 'ui_rim_thin').setDepth(depth + 1));
     this.cd = A(scene.add.graphics().setDepth(depth + 2));
     this.ico = A(iconKey ? scene.add.image(0, 0, iconKey).setDepth(depth + 4) : scene.add.text(0, 0, icon, { fontFamily: FONT, fontSize: iconSize + 'px', fontStyle: '700', color: '#fff' }).setOrigin(0.5).setDepth(depth + 4)); this.isImg = !!iconKey;
-    this.badge = A(scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '10px', fontStyle: '800', color: '#2b1f06', backgroundColor: '#f4d36b', padding: { x: 4, y: 1 } }).setOrigin(0.5).setDepth(depth + 6).setVisible(false));
-    this.sub = A(scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '10px', fontStyle: '800', color: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(depth + 5));
+    this.badge = A(scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '10px', fontStyle: '800', color: '#2b1f06', backgroundColor: '#f1d58a', padding: { x: 4, y: 1 } }).setOrigin(0.5).setDepth(depth + 6).setVisible(false));
+    this.sub = A(scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '10px', fontStyle: '700', color: '#fff', stroke: '#0b130e', strokeThickness: 2.5 }).setOrigin(0.5).setDepth(depth + 5));
     this.parts = [this.shadow, this.glow, this.face, this.rim, this.cd, this.ico, this.sub, this.badge];
     this.face.on('pointerdown', () => { this.press = 0.9; this.onTap?.(); }); const up = () => { this.press = 1; }; this.face.on('pointerup', up); this.face.on('pointerout', up); this.face.on('pointerupoutside', up);
   }
@@ -30,12 +31,12 @@ export class ActionButton {
   // s: {alpha, active, activeFrac, cd, cdFrac, sub, subColor, tint}
   setState(s) {
     if (this.press > 1) this.press = Math.max(1, this.press - 0.012); // nảy nhẹ khi vừa sẵn sàng (đặt press > 1 để kích hoạt)
-    this.apply(); const a = s.alpha ?? 1; for (const p of [this.face, this.rim, this.ico, this.shadow]) p.setAlpha(p === this.shadow ? 0.4 * a : a);
+    this.apply(); const a = s.alpha ?? 1; for (const p of [this.face, this.rim, this.ico, this.shadow]) p.setAlpha(p === this.shadow ? 0.28 * a : p === this.face ? FACE_A * a : a);
     if (s.tint !== undefined) this.face.setTint(s.tint); else this.face.setTint(this.color);
     this.sub.setText(s.sub ?? '').setColor(s.subColor ?? '#ffffff'); this.cd.clear();
-    if (s.active) { this.glow.setAlpha(0.55 + 0.35 * Math.sin(this.scene.time.now / 110)); this.cd.lineStyle(5, 0xfff08a, 1).beginPath().arc(this.x, this.y, this.r + 1, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * (s.activeFrac ?? 1), false).strokePath(); }
+    if (s.active) { this.glow.setAlpha(0.55 + 0.35 * Math.sin(this.scene.time.now / 110)); this.cd.lineStyle(3, 0xfff6c8, 0.95).beginPath().arc(this.x, this.y, this.r + 1, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * (s.activeFrac ?? 1), false).strokePath(); }
     else this.glow.setAlpha(s.ready ? 0.22 + 0.18 * Math.sin(this.scene.time.now / 300) : 0);
-    if (s.cd > 0) { this.cd.fillStyle(0x000000, 0.62).beginPath().slice(this.x, this.y, this.r - 4, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * s.cdFrac, false).fillPath(); }
+    if (s.cd > 0) { this.cd.fillStyle(0x0a110d, 0.58).beginPath().slice(this.x, this.y, this.r - 4, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * s.cdFrac, false).fillPath(); }
   }
   setBadge(t) { this.badge.setText(t || '').setVisible(!!t && this.parts[0].visible); return this; }
   setVisible(v) { for (const p of this.parts) p.setVisible(v); return this; }

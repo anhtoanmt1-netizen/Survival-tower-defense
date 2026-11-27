@@ -158,7 +158,7 @@ Lối chơi (tốc độ, sát thương, spawn, cân bằng) **giống hệt** �
 ### Tính năng mới
 - **Âm thanh 4 nhóm** (Nhạc & môi trường / Tháp / Quái / Nhân vật): mỗi nhóm có thanh kéo + nút tắt riêng, lưu trong `std.settings.v1` (cài đặt `sfx` cũ được tự chuyển).
 - **Bước chân** đồng bộ nhịp chạy thật, kèm bụi nhẹ theo bước (số hạt theo chế độ hiệu năng); **tóc** lay theo gió, đuôi tóc theo chuyển động và quán tính khi dừng.
-- **Lướt (Dash)**: nút trên giao diện hoặc phím Space/Shift; hồi 60s, nâng cấp bằng vàng (cấp tối đa 5, hồi tối thiểu 30s, quãng tối đa 5.2 ô), có ảnh mờ, va chạm an toàn (không xuyên tường), hiển thị đếm ngược. Không nằm trong `SKILLS` nên không đổi giao thức multiplayer.
+- **Lướt (Dash)**: nút trên giao diện hoặc phím Space/Shift; hồi 30s ở cấp 1, giảm đều mỗi cấp xuống 1s ở cấp 10 (cấp cao nhất), nâng cấp bằng vàng, quãng lướt tối đa 5.2 ô, có ảnh mờ, va chạm an toàn (không xuyên tường), hiển thị đếm ngược. Không nằm trong `SKILLS` nên không đổi giao thức multiplayer.
 - **Tốc độ game X1/X2/X3**: mô phỏng chia bước ≤ 0.05s; UI, âm thanh, rung và đồng hồ thật không bị nhân tốc độ.
 - **Nhập xu ẩn**: chạm 5 lần liên tiếp vào số vàng; nhập số nguyên 0…9.999.999. Chỉ đặt số dư, không tính vào thống kê "vàng kiếm được".
 - **Rung khi mất máu thật** (Cài đặt → Hiệu năng → Rung); an toàn nếu máy không hỗ trợ. APK cần quyền `VIBRATE` (đã tự vá ở `tools/patch-manifest.mjs`).
@@ -176,3 +176,13 @@ Lối chơi (tốc độ, sát thương, spawn, cân bằng) **giống hệt** �
 - **Trang chỉ hiện khung menu trống (không bấm được)**: nghĩa là đang phục vụ *mã nguồn* (`index.html` gốc dùng `/src/main.js` và `import 'phaser'`) chứ không phải thư mục `dist`. Trình duyệt không chạy được mã nguồn thô. Cách đúng: chạy `npm run build` rồi đưa **thư mục `dist`** lên host, hoặc dùng `.github/workflows/deploy-web.yml` (Settings → Pages → *Source: GitHub Actions*, không chọn "Deploy from a branch").
 - Nếu game không khởi động, trang tự hiện hộp đỏ ở trên cùng nêu lý do/lỗi (khối chẩn đoán trong `index.html`).
 - Sau khi triển khai bản mới mà vẫn thấy bản cũ: tải lại cứng (Ctrl+F5) hoặc bấm thanh "Cập nhật"; có thể xóa dữ liệu trang trong DevTools → Application → Service Workers → Unregister.
+
+### Cập nhật v1.4
+- **Kéo bản đồ bằng 1 ngón**: giữ và kéo ở vùng trống để xem các khu vực khác (có quán tính nhẹ). Chạm ngắn vẫn chọn tháp/tường như cũ. Camera tự quay về nhân vật khi bạn dùng joystick hoặc bấm "Về nhân vật".
+- **Hoa sen** (`public/assets/lotus/`, cắt từ `tools/src/hoasen.png` bằng `tools/build_lotus_assets.py`): mọc thành đám trên mặt nước (cách bờ ≥1 ô, tránh cổng quái/điểm xuất phát), lay nhẹ như gió thoảng, có gợn nước dưới mỗi bông; chế độ Tiết kiệm thưa bớt và bỏ gợn. Logic bố trí ở `src/map/lotusPlan.js`, vẽ ở `src/render/lotusLayer.js`.
+- **Nước**: thêm sóng dài trôi chậm bên cạnh lấp lánh và gợn tròn (số hiệu ứng vẫn bị giới hạn theo chế độ hiệu năng).
+- **Lướt**: cấp 1 hồi 30s, giảm đều mỗi cấp đến 1s ở cấp 10.
+- **Hàng kỹ năng nằm ngang**: XÂY ở góc dưới-phải, rồi Bất tử · Lướt · Xuyên vật · Tốc độ nối sang trái, cách đều (`src/ui/actionRow.js`). Màn hẹp thì cả hàng nâng lên trên joystick, vẫn một hàng và không chồng nhau.
+- **Nút kỹ năng & joystick**: kính mờ, viền vàng mảnh, icon rõ. Joystick **nổi** (chạm nửa dưới-trái là xuất hiện dưới ngón), đế trượt theo ngón, vùng chết 8%, thả thì mờ đi và về chỗ cũ. Camera bám nhân vật theo thời gian (không phụ thuộc FPS) và sprite không còn bị làm tròn theo pixel nên bớt khựng.
+- **HUD nhân vật** (`src/ui/PlayerHud.js`): avatar viền theo màu áo, tên, tim, chip vàng/đợt/quái, font Montserrat; avatar thở nhẹ, chớp đỏ khi mất máu, tim và số vàng nảy khi đổi.
+- **Bảng nâng cấp tháp**: danh sách một cột, giá trị hiện tại và giá trị sau nâng cấp có cột riêng nên không tràn; bảng tự đặt ngay trên hàng nút và cuộn được nếu thiếu chỗ.

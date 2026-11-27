@@ -22,19 +22,32 @@ export function createUiTextures(scene) {
     c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 3; disc(c, C, C, C - 11); c.stroke();
   });
   make(scene, 'ui_ring', S, S, (c) => { smooth(c); const g = c.createRadialGradient(C, C, C - 26, C, C, C); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.7, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, S, S); });
-  // Đế joystick: kính tối trong suốt, viền vàng mảnh + vòng sáng, 4 mũi tên hướng và 4 chấm phụ
-  make(scene, 'ui_joy_base', 256, 256, (c) => {
-    smooth(c); const g = c.createRadialGradient(128, 120, 14, 128, 128, 124); g.addColorStop(0, 'rgba(34,52,44,.30)'); g.addColorStop(0.75, 'rgba(10,18,14,.55)'); g.addColorStop(1, 'rgba(6,10,8,.72)');
-    c.fillStyle = g; disc(c, 128, 128, 120); c.fill();
-    const rg = c.createLinearGradient(0, 8, 0, 248); rg.addColorStop(0, '#fff0b0'); rg.addColorStop(0.5, '#e0b13a'); rg.addColorStop(1, '#8a5f14'); c.strokeStyle = rg; c.lineWidth = 7; disc(c, 128, 128, 117); c.stroke();
-    c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = 2.5; disc(c, 128, 128, 92); c.stroke();
-    c.fillStyle = 'rgba(255,236,170,.9)'; for (let i = 0; i < 4; i++) { c.save(); c.translate(128, 128); c.rotate(i * Math.PI / 2); c.beginPath(); c.moveTo(0, -106); c.lineTo(10, -88); c.lineTo(-10, -88); c.closePath(); c.fill(); c.restore(); }
-    c.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; disc(c, 128 + Math.cos(a) * 98, 128 + Math.sin(a) * 98, 4); c.fill(); }
+  // Mặt nút kính mờ (nhuộm màu theo từng nút): sáng nhẹ ở trên, đậm dần xuống dưới, vệt sáng mảnh phía trên; dùng với alpha ~0.8 để trong mờ
+  make(scene, 'ui_glass', S, S, (c) => {
+    smooth(c); const g = c.createLinearGradient(0, 6, 0, S - 6); g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#cfcfcf'); g.addColorStop(1, '#8c8c8c');
+    c.fillStyle = g; disc(c, C, C, C - 4); c.fill();
+    const gl = c.createLinearGradient(0, 8, 0, C - 4); gl.addColorStop(0, 'rgba(255,255,255,.55)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gl; c.beginPath(); c.ellipse(C, C - 24, C - 20, 28, 0, 0, TAU); c.fill();
   });
-  // Núm: ngọc vàng bóng có điểm sáng
+  // Viền mảnh sang trọng: 2.5px, vàng nhạt chuyển sắc, nửa trên sáng hơn nửa dưới
+  make(scene, 'ui_rim_thin', S, S, (c) => {
+    smooth(c); const g = c.createLinearGradient(0, 0, 0, S); g.addColorStop(0, 'rgba(255,244,200,.95)'); g.addColorStop(0.5, 'rgba(240,200,110,.65)'); g.addColorStop(1, 'rgba(190,140,50,.5)');
+    c.strokeStyle = g; c.lineWidth = 2.6; disc(c, C, C, C - 3.5); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; disc(c, C, C, C - 8); c.stroke();
+  });
+  // Đế joystick: kính mờ, viền mảnh, 4 chevron mảnh, vòng trong mờ (không còn viền dày)
+  make(scene, 'ui_joy_base', 256, 256, (c) => {
+    smooth(c); const g = c.createRadialGradient(128, 124, 10, 128, 128, 122); g.addColorStop(0, 'rgba(255,255,255,.10)'); g.addColorStop(0.7, 'rgba(20,34,28,.28)'); g.addColorStop(1, 'rgba(8,14,10,.42)');
+    c.fillStyle = g; disc(c, 128, 128, 120); c.fill();
+    const rg = c.createLinearGradient(0, 8, 0, 248); rg.addColorStop(0, 'rgba(255,244,200,.9)'); rg.addColorStop(1, 'rgba(210,160,60,.55)'); c.strokeStyle = rg; c.lineWidth = 3; disc(c, 128, 128, 118); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.14)'; c.lineWidth = 1.5; disc(c, 128, 128, 84); c.stroke();
+    c.strokeStyle = 'rgba(255,240,190,.75)'; c.lineWidth = 3.2; c.lineCap = 'round'; c.lineJoin = 'round';
+    for (let i = 0; i < 4; i++) { c.save(); c.translate(128, 128); c.rotate(i * Math.PI / 2); c.beginPath(); c.moveTo(-9, -93); c.lineTo(0, -103); c.lineTo(9, -93); c.stroke(); c.restore(); }
+  });
+  // Núm: ngọc kính trong suốt, viền mảnh, điểm sáng
   make(scene, 'ui_knob', S, S, (c) => {
-    smooth(c); const g = c.createRadialGradient(C - 16, C - 20, 4, C, C, C - 4); g.addColorStop(0, '#fffdf0'); g.addColorStop(0.5, '#f1dc95'); g.addColorStop(1, '#a8802a'); c.fillStyle = g; disc(c, C, C, C - 4); c.fill();
-    c.strokeStyle = 'rgba(70,44,6,.75)'; c.lineWidth = 5; c.stroke();
-    c.fillStyle = 'rgba(255,255,255,.6)'; c.beginPath(); c.ellipse(C - 8, C - 20, 22, 11, -0.5, 0, TAU); c.fill();
+    smooth(c); const g = c.createRadialGradient(C - 14, C - 18, 4, C, C, C - 4); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.55, 'rgba(250,232,170,.8)'); g.addColorStop(1, 'rgba(214,170,70,.72)'); c.fillStyle = g; disc(c, C, C, C - 5); c.fill();
+    c.strokeStyle = 'rgba(255,248,215,.95)'; c.lineWidth = 2.6; disc(c, C, C, C - 6); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.ellipse(C - 8, C - 20, 20, 9, -0.5, 0, TAU); c.fill();
   });
 }
