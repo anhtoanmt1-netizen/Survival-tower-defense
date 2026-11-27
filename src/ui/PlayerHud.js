@@ -32,7 +32,7 @@ export class PlayerHud {
     this.hearts = []; this.prevHp = -1; this.t = 0; this.hurtT = 0; this.bump = 0; this.lastGold = -1;
     const chip = (key, tint) => ({ ico: S(add.image(0, 0, 'ui_icon_' + key).setDepth(1002).setTint(tint)), tx: S(add.text(0, 0, '', TEXT(12.5, 800)).setDepth(1002)), w: 0, x: 0, y: 0 });
     this.chips = { gold: chip('coin', 0xffd24a), wave: chip('flag', 0x9ad8ff), mob: chip('slime', 0x8be07a) };
-    this.tNext = S(add.text(0, 0, '', TEXT(11, 600, '#e8efe3')).setDepth(1002)); this.tInfo = S(add.text(0, 0, '', TEXT(10.5, 600, '#cfe0d2')).setDepth(1002));
+    this.tNext = S(add.text(0, 0, '', TEXT(11, 600, '#e8efe3')).setDepth(1002));
     this.x = 0; this.y = 0; this.maxRight = 300; this.sig = ''; this.goldRect = { x: -99, y: -99, w: 0, h: 0 }; this.bottom = 0;
   }
   layout(x, y, maxRight) { this.x = x; this.y = y; this.maxRight = maxRight; this.sig = ''; }
@@ -50,7 +50,7 @@ export class PlayerHud {
     const tx0 = x + 6 + D + 10; this.tName.setPosition(tx0, y + 8); const hsz = 17, gap = 3, hy = y + 29;
     this.hearts.forEach((h, i) => { const full = i < st.hp, pop = this.heartPop && this.heartPop.i === i ? 1 + 0.35 * Math.sin(Math.PI * Math.min(1, this.heartPop.t / 0.4)) : 1;
       h.setPosition(tx0 + hsz / 2 + i * (hsz + gap), hy + hsz / 2).setDisplaySize(hsz * pop, hsz * pop).setTint(full ? 0xff6b6b : 0x3f4a44).setAlpha(full ? 1 : 0.55).setVisible(i < st.maxHp); });
-    this.tSub.setPosition(tx0, y + 48).setText(st.info || ''); if (this.tInfo.text !== (st.fps || '')) this.tInfo.setText(st.fps || '');
+    this.tSub.setPosition(tx0, y + 48).setText(st.info || '');
     const cardW = Math.max(tx0 - x + Math.max(st.maxHp * (hsz + gap), this.tName.width, this.tSub.width) + 12, 150), cardH = D + 12;
     // chip thông tin
     const goldTxt = String(st.gold), items = [['gold', goldTxt], ['wave', `Đợt ${st.wave}/${st.total}`], ['mob', `${st.active}${st.queue ? ' +' + st.queue : ''}`]];
@@ -65,6 +65,6 @@ export class PlayerHud {
     const bumpK = this.bump > 0 ? 1 + 0.18 * Math.sin(Math.PI * (1 - this.bump)) : 1; if (st.gold !== this.lastGold) { if (this.lastGold >= 0) this.bump = 1; this.lastGold = st.gold; } this.bump = Math.max(0, this.bump - dt * 4.5);
     for (const k of ['gold', 'wave', 'mob']) { const c = this.chips[k], sc = k === 'gold' ? bumpK : 1; c.ico.setPosition(c.x + 8 + 8, c.y + 12).setDisplaySize(16 * sc, 16 * sc); c.tx.setPosition(c.x + 8 + 16 + 4, c.y + 12).setOrigin(0, 0.5).setScale(sc); }
     this.chips.gold.tx.setColor(this.bump > 0 ? '#fff3b0' : '#ffffff');
-    this.tNext.setPosition(x + 2, this.bottom + 6); this.tInfo.setPosition(x + 2, this.bottom + 21); this.bottom += 36;
+    this.tNext.setPosition(x + 2, this.bottom + 6); this.bottom += 22;
   }
 }

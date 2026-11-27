@@ -54,7 +54,7 @@ export class UIScene extends Phaser.Scene {
     this.banner = S(this.add.text(0, 0, '', { ...TXT, fontSize: '26px', fontStyle: '800', strokeThickness: 6, align: 'center' }).setOrigin(0.5).setDepth(1100).setAlpha(0));
     this.warn = S(this.add.text(0, 0, '', { ...TXT, fontSize: '18px', color: '#ffd24a', align: 'center' }).setOrigin(0.5, 0).setDepth(1100).setVisible(false));
     this.goldRect = { x: -99, y: -99, w: 0, h: 0 }; this.mmDirty = true; this.dashWasCd = false;
-    this.lastWave = 0; this.fpsT = 0; this.fpsText = ''; this.lastWarn = -1;
+    this.lastWave = 0;  this.lastWarn = -1;
     // --- nút XÂY + thẻ tháp ---
     this.buildOpen = false; this.cardTxt = '';
     this.btn = new ActionButton(this, { color: 0xe0b13a, iconKey: 'ui_icon_hammer', onTap: () => { audio.play(this.buildOpen ? 'close' : 'open'); this.setBuildOpen(!this.buildOpen); } });
@@ -202,11 +202,10 @@ export class UIScene extends Phaser.Scene {
     const bc = game.ts.buildCost(), gold = game.economy.gold;
     for (const o of this.mCards) { const cost = o.d.cost(), ok = gold >= cost; if (o.last !== cost) { o.last = cost; o.price.setText(String(cost)); } if (o.ok !== ok) { o.ok = ok; o.price.setColor(ok ? '#ffe9a0' : '#ff7b7b'); } o.icon.setAlpha(ok ? 1 : 0.45); o.name.setAlpha(ok ? 1 : 0.6); o.coin.setAlpha(ok ? 1 : 0.6); }
     this.btn.setState({ alpha: player.dead ? 0.3 : 1, active: this.buildOpen, activeFrac: 1, ready: !player.dead && !this.buildOpen && game.economy.gold >= Math.min(bc, game.ts.wallCost()) }); this.btnT.setAlpha(player.dead ? 0.3 : 1);
-    this.fpsT += ms; if (this.fpsT > 500) { this.fpsT = 0; this.fpsText = Math.round(this.game.loop.actualFps) + ' FPS'; }
     const total = WAVE_SETTINGS.totalWaves, cdn = Math.ceil(Math.max(0, dir.countdown));
     const nextWave = dir.wave + 1, ns = dir.wave < total ? dir.specFor(nextWave) : null, next = ns ? `${dir.wave === 0 ? 'Đợt đầu' : 'Đợt ' + nextWave} sau ${cdn}s (${ns.count} slime${ns.boss ? ', THỬ THÁCH' : ''})` : 'Đã xuất hiện đủ ' + total + ' đợt – diệt hết để thắng';
     // HUD: icon vector + số (nền trong suốt, chữ có viền)
-    this.hud.setNext(next); this.hud.update(ms / 1000, { hp: player.hp, maxHp: player.maxHp, gold: game.economy.gold, wave: dir.wave, total, active: world.active, queue: dir.queue.length, dead: player.dead, info: diff.name, fps: this.fpsText });
+    this.hud.setNext(next); this.hud.update(ms / 1000, { hp: player.hp, maxHp: player.maxHp, gold: game.economy.gold, wave: dir.wave, total, active: world.active, queue: dir.queue.length, dead: player.dead, info: diff.name });
     // nhãn gợi ý khi game đang tự tạm dừng vì bảng nâng cấp
     this.setBtn.setState({ alpha: 1 }); this.camBtn.setState({ alpha: 1 });
     this.goldRect = this.hud.goldRect; this.goldZone.setPosition(this.goldRect.x, this.goldRect.y).setSize(this.goldRect.w, this.goldRect.h);
