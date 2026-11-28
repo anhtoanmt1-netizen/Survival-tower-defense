@@ -205,7 +205,7 @@ export class UIScene extends Phaser.Scene {
     const total = WAVE_SETTINGS.totalWaves, cdn = Math.ceil(Math.max(0, dir.countdown));
     const nextWave = dir.wave + 1, ns = dir.wave < total ? dir.specFor(nextWave) : null, next = ns ? `${dir.wave === 0 ? 'Đợt đầu' : 'Đợt ' + nextWave} sau ${cdn}s (${ns.count} slime${ns.boss ? ', THỬ THÁCH' : ''})` : 'Đã xuất hiện đủ ' + total + ' đợt – diệt hết để thắng';
     // HUD: icon vector + số (nền trong suốt, chữ có viền)
-    this.hud.setNext(next); this.hud.update(ms / 1000, { hp: player.hp, maxHp: player.maxHp, gold: game.economy.gold, wave: dir.wave, total, active: world.active, queue: dir.queue.length, dead: player.dead, info: diff.name });
+    this.hud.update(ms / 1000, { hp: player.hp, maxHp: player.maxHp, gold: game.economy.gold, wave: dir.wave, total, active: world.active, dead: player.dead, info: diff.name });
     // nhãn gợi ý khi game đang tự tạm dừng vì bảng nâng cấp
     this.setBtn.setState({ alpha: 1 }); this.camBtn.setState({ alpha: 1 });
     this.goldRect = this.hud.goldRect; this.goldZone.setPosition(this.goldRect.x, this.goldRect.y).setSize(this.goldRect.w, this.goldRect.h);

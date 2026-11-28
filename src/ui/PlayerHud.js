@@ -32,11 +32,10 @@ export class PlayerHud {
     this.hearts = []; this.prevHp = -1; this.t = 0; this.hurtT = 0; this.bump = 0; this.lastGold = -1;
     const chip = (key, tint) => ({ ico: S(add.image(0, 0, 'ui_icon_' + key).setDepth(1002).setTint(tint)), tx: S(add.text(0, 0, '', TEXT(12.5, 800)).setDepth(1002)), w: 0, x: 0, y: 0 });
     this.chips = { gold: chip('coin', 0xffd24a), wave: chip('flag', 0x9ad8ff), mob: chip('slime', 0x8be07a) };
-    this.tNext = S(add.text(0, 0, '', TEXT(11, 600, '#e8efe3')).setDepth(1002));
+
     this.x = 0; this.y = 0; this.maxRight = 300; this.sig = ''; this.goldRect = { x: -99, y: -99, w: 0, h: 0 }; this.bottom = 0;
   }
   layout(x, y, maxRight) { this.x = x; this.y = y; this.maxRight = maxRight; this.sig = ''; }
-  setNext(t) { this.tNext.setText(t); }
   // st: {hp, maxHp, gold, wave, total, active, queue, dead, info}
   update(dt, st) {
     this.t += dt; const { x, y } = this, D = 52, ax = x + 6 + D / 2, ay = y + 6 + D / 2;
@@ -53,7 +52,7 @@ export class PlayerHud {
     this.tSub.setPosition(tx0, y + 48).setText(st.info || '');
     const cardW = Math.max(tx0 - x + Math.max(st.maxHp * (hsz + gap), this.tName.width, this.tSub.width) + 12, 150), cardH = D + 12;
     // chip thông tin
-    const goldTxt = String(st.gold), items = [['gold', goldTxt], ['wave', `Đợt ${st.wave}/${st.total}`], ['mob', `${st.active}${st.queue ? ' +' + st.queue : ''}`]];
+    const goldTxt = String(st.gold), items = [['gold', goldTxt], ['wave', `Đợt ${st.wave}/${st.total}`], ['mob', String(st.active)]];
     for (const [k, txt] of items) { const c = this.chips[k]; if (c.tx.text !== txt) c.tx.setText(txt); c.w = 8 + 16 + 4 + c.tx.width + 9; }
     const sig = [cardW, this.chips.gold.w, this.chips.wave.w, this.chips.mob.w, this.maxRight, x, y].join('|');
     if (sig !== this.sig) { this.sig = sig;
@@ -65,6 +64,6 @@ export class PlayerHud {
     const bumpK = this.bump > 0 ? 1 + 0.18 * Math.sin(Math.PI * (1 - this.bump)) : 1; if (st.gold !== this.lastGold) { if (this.lastGold >= 0) this.bump = 1; this.lastGold = st.gold; } this.bump = Math.max(0, this.bump - dt * 4.5);
     for (const k of ['gold', 'wave', 'mob']) { const c = this.chips[k], sc = k === 'gold' ? bumpK : 1; c.ico.setPosition(c.x + 8 + 8, c.y + 12).setDisplaySize(16 * sc, 16 * sc); c.tx.setPosition(c.x + 8 + 16 + 4, c.y + 12).setOrigin(0, 0.5).setScale(sc); }
     this.chips.gold.tx.setColor(this.bump > 0 ? '#fff3b0' : '#ffffff');
-    this.tNext.setPosition(x + 2, this.bottom + 6); this.bottom += 22;
+    this.bottom += 6;
   }
 }
