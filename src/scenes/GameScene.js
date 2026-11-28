@@ -25,6 +25,7 @@ import { PauseState } from '../systems/PauseState.js';
 import { Player } from '../entities/Player.js';
 import { MonsterWorld } from '../sim/world.js';
 import { WaveDirector, selectGates } from '../sim/director.js';
+import { SLIME_V2 } from '../config/slimeRuntime.js';
 import { TowerSystem } from '../sim/towers.js';
 import { Economy } from '../sim/economy.js';
 import { MonsterRenderer } from '../systems/MonsterRenderer.js';
@@ -50,6 +51,19 @@ export class GameScene extends Phaser.Scene {
       onFree: (m) => this.renderer.release(m),
       onSpawn: () => audio.play('slime_spawn'),
       onKill: (m) => { this.economy.add(m.reward); this.fx.float(m.x * TS, m.y * TS - 26, '+' + m.reward); this.fx.puff(m.x * TS, m.y * TS - 8, 0xffffff, 8, 50, 0.4); audio.play('slime_die', { pitch: 1.5 - m.cfg.scale * 0.5 }); audio.play('coin'); },
+      onCast: (m, def, a) => { if (a.r) this.fx.ring(a.x * TS, a.y * TS, 0xff5a3a, 6, a.r * TS, def.cast || 0.6); },
+      onPhase: (m, ph, first) => { if (first) return; this.fx.ring(m.x * TS, m.y * TS - 10, 0xffffff, 10, 120, 0.7); this.fx.glow(m.x * TS, m.y * TS - 14, 0xffe9a0, 140, 0.6); this.cameras.main.shake(180, 0.004); this.panels?.toast(`${m.cfg.name}: giai đoạn mới!`, 'ok'); },
+      onReaction: (m, name) => { this.fx.puff(m.x * TS, m.y * TS - 12, 0xffffff, 6, 50, 0.4); },
+      onChain: (m, p) => { this.fx.spark(p.x * TS, p.y * TS - 14, 0xbfe0ff, 8, 70, 0.3, 1); this.fx.glow(m.x * TS, m.y * TS - 14, 0xbfe0ff, 60, 0.2, 0.8); },
+      onTeleport: (m, from) => { this.fx.puff(from.x * TS, from.y * TS - 10, 0xb46bff, 8, 50, 0.4); this.fx.ring(m.x * TS, m.y * TS - 8, 0xb46bff, 6, 36, 0.3); },
+      onRebirth: (m) => { this.fx.ring(m.x * TS, m.y * TS - 10, 0xff8a3a, 10, 90, 0.7); this.fx.glow(m.x * TS, m.y * TS - 14, 0xffe0a0, 120, 0.7); },
+      onRage: (m) => { this.fx.puff(m.x * TS, m.y * TS - 12, 0xff4a3a, 8, 60, 0.4); },
+      onSupport: (m, def, c) => { this.fx.ring(c.x * TS, c.y * TS - 8, 0x9fffc0, 8, (def.effect.radius ?? 2.5) * TS, 0.5); },
+      onElement: (m, el) => { this.fx.puff(m.x * TS, m.y * TS - 14, ({ fire: 0xff7a2a, ice: 0x7ad8ff, thunder: 0xffe65a, poison: 0x7aff5a, dark: 0xb46bff })[el] ?? 0xffffff, 5, 50, 0.35); },
+      onFuse: (m) => { this.fx.ring(m.x * TS, m.y * TS - 10, 0xffffff, 8, 70, 0.5); this.fx.glow(m.x * TS, m.y * TS - 14, 0xffe9a0, 90, 0.5); },
+      onPull: (m, p) => { this.fx.spark(p.x * TS, p.y * TS - 10, 0xc890ff, 6, 50, 0.3, 1); },
+      onDash: (m) => { this.fx.puff(m.x * TS, m.y * TS - 6, 0xdddddd, 5, 50, 0.3); },
+      onShieldBreak: (m) => { this.fx.ring(m.x * TS, m.y * TS - 10, 0x9fe8ff, 8, 40, 0.3); },
       onBurnTick: (m, n) => { this.fx.damage(m.x * TS, m.y * TS - 26 * m.cfg.scale, n, false, 'burn'); },
     }, rng, { contactDamage: diff.contactDamage });
     this.player = new Player(this, this.grid, s.x + 0.5, s.y + 0.5, { name: this.opts.name, shirt: this.opts.shirt, hp: diff.playerHp, skillCdMul: diff.skillCdMul });
@@ -63,7 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.visHandler = () => { if (document.hidden && this.state === 'playing' && !this.pause.wanted.has('user')) { this.togglePause(); } if (document.hidden) cancelVibration(); }; document.addEventListener('visibilitychange', this.visHandler); // chạy nền / khóa màn hình: tự tạm dừng, không chạy mô phỏng ngầm
     this.events.once('shutdown', () => { document.removeEventListener('visibilitychange', this.visHandler); this.dashFx.destroy(); cancelVibration(); }); this.unsubPerf = settings.on((d, keys) => { if (keys.includes('perf')) perf.applyToGame(this.game); }); this.events.once('shutdown', () => this.unsubPerf?.());
     this.activeGates = selectGates(map.gates, 1, rng); // 1 người = 1 cổng (multiplayer: n người = n cổng)
-    this.director = new WaveDirector({ grid: this.grid, world: this.world, gates: this.activeGates, rng, diff, maxActive: diff.maxActive,
+    this.director = new WaveDirector({ v2: SLIME_V2.enabled, grid: this.grid, world: this.world, gates: this.activeGates, rng, diff, maxActive: diff.maxActive,
       settings: { ...WAVE_SETTINGS, firstWaveDelay: diff.firstWaveDelay, interval: diff.waveInterval, spawnPerSecond: diff.spawnPerSecond } });
     for (const g of this.activeGates) {
       const o = this.add.ellipse(g.x * TS + 16, g.y * TS + 22, 64, 40, 0x8e44ff, 0.35).setStrokeStyle(2, 0xd2a8ff).setDepth(1);

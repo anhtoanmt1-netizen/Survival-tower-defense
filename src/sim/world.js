@@ -1,6 +1,7 @@
 import { Monster } from './monster.js';
 import { FlowField } from '../core/flowfield.js';
 import { MONSTER_SETTINGS } from '../config/slimes.js';
+import { SlimeRuntime } from './slimeRuntime.js';
 const REFRESH = 0.2; // giây: giới hạn tần suất tính lại flow field
 // Thế giới quái vật: pooling, flow field dùng chung, va chạm giữa quái, tấn công người chơi.
 export class MonsterWorld {
@@ -11,7 +12,7 @@ export class MonsterWorld {
   }
   spawn(type, x, y, hpMul, speedMul, rewardMul) {
     const m = (this.free.pop() || new Monster()).init(type, x, y, hpMul, speedMul, rewardMul);
-    this.monsters.push(m); this.active++; this.hooks.onSpawn?.(m); return m;
+    this.monsters.push(m); this.active++; if (m.v2) (this.runtime ||= new SlimeRuntime(this, this.rng, this.hooks)).attach(m); this.hooks.onSpawn?.(m); return m;
   }
   damage(m, amount, opts) {
     if (!m.dying && m.alive) this.damageDealt += Math.max(0, Math.min(amount, m.hp));
@@ -24,10 +25,11 @@ export class MonsterWorld {
     }
     return died;
   }
-  applySlow(m, pct, dur) { if (m.dying) return; if (pct >= m.slowPct || m.slowT <= 0) m.slowPct = pct; m.slowT = Math.max(m.slowT, dur); }
+  applySlow(m, pct, dur) { if (m.dying) return; if (m.v2) { m.status.apply('slow', { pct, dur }); return; } if (pct >= m.slowPct || m.slowT <= 0) m.slowPct = pct; m.slowT = Math.max(m.slowT, dur); }
   // cfg: {burnDps, burnDur, spreadChance, spreadRadius}
   ignite(m, cfg) {
     if (m.dying || !cfg.burnDps) return;
+    if (m.v2) { const r = m.status.apply('burn', { dps: cfg.burnDps, dur: cfg.burnDur }); if (r.applied) { m.spreadChance = cfg.spreadChance || 0; m.spreadRadius = cfg.spreadRadius || 0; } return; }
     m.burnDps = Math.max(m.burnT > 0 ? m.burnDps : 0, cfg.burnDps); m.burnT = Math.max(m.burnT, cfg.burnDur); m.burnDur = cfg.burnDur;
     m.spreadChance = cfg.spreadChance || 0; m.spreadRadius = cfg.spreadRadius || 0;
   }
@@ -41,6 +43,7 @@ export class MonsterWorld {
     }
     for (const m of this.monsters.slice()) { // hiệu ứng trạng thái: làm chậm, cháy
       if (m.dying) continue;
+      if (m.v2) { this.tickV2(m, dt); continue; }
       if (m.slowT > 0) { m.slowT -= dt; if (m.slowT <= 0) { m.slowT = 0; m.slowPct = 0; } }
       m.slow = 1 - m.slowPct;
       if (m.burnT > 0) { m.burnT -= dt; m.burnNumT -= dt; m.burnAcc += m.burnDps * dt; if (m.burnAcc >= 1) { const d = Math.floor(m.burnAcc); m.burnAcc -= d; m.burnNum += d; const died = this.damage(m, d, { silent: true }); if (m.burnNumT <= 0 || died) { this.hooks.onBurnTick?.(m, m.burnNum); m.burnNum = 0; m.burnNumT = 0.6; } } if (m.burnT <= 0) { m.burnT = 0; m.burnAcc = 0; } }
@@ -52,6 +55,7 @@ export class MonsterWorld {
       m.update(dt, this.field, grid, goal);
     }
     this.separate();
+    if (this.runtime) for (const e of this.runtime.update(dt, alive)) events.push(e); // kỹ năng quái V2 (ra đòn lên người chơi => cùng kênh sự kiện 'hit' để UI/âm thanh/rung hoạt động như cũ)
     for (const m of this.monsters) {
       if (m.dying || m.attackCd > 0) continue;
       for (const p of alive) {
@@ -63,9 +67,20 @@ export class MonsterWorld {
       }
     }
     for (let i = this.monsters.length - 1; i >= 0; i--) {
-      const m = this.monsters[i]; if (m.dying && m.dieT <= 0) { m.alive = false; this.monsters.splice(i, 1); this.free.push(m); this.hooks.onFree?.(m); }
+      const m = this.monsters[i]; if (m.dying && m.dieT <= 0) { m.alive = false; m.sk = null; this.monsters.splice(i, 1); this.free.push(m); this.hooks.onFree?.(m); }
     }
     return events;
+  }
+  // Quái V2: trạng thái do StatusSet quản lý; đồng bộ lại các trường cũ (burnT, slowT, slow) để bộ vẽ và logic cũ dùng chung.
+  tickV2(m, dt) {
+    const st = m.status;
+    for (const e of st.update(dt)) {
+      if (e.type === 'dot') { m.burnNum += e.dmg; m.burnNumT -= 0; const died = this.damage(m, e.dmg, { silent: true }); m.burnNumT -= dt; if (m.burnNumT <= 0 || died) { this.hooks.onBurnTick?.(m, Math.max(1, Math.round(m.burnNum))); m.burnNum = 0; m.burnNumT = 0.6; } }
+      else if (e.type === 'react') { if (e.dmg) this.damage(m, e.dmg, { silent: true }); this.hooks.onReaction?.(m, e.name, e.dmg || 0); }
+      else if (e.type === 'shieldBreak') this.hooks.onShieldBreak?.(m);
+      if (m.dying) return;
+    }
+    const b = st.get('burn'), sl = st.get('slow'); m.burnT = b ? b.t : 0; m.burnDps = b ? b.dps : 0; m.slowT = sl ? sl.t : 0; m.slowPct = sl ? sl.pct : 0; m.slow = st.speedMul(); m.shieldUp = !!st.get('shield'); if (m.shieldHit > 0) m.shieldHit -= dt;
   }
   separate() { // đẩy nhẹ các slime chồng nhau (băm theo ô). Vẫn qua kiểm tra va chạm địa hình.
     const ms = this.monsters, buckets = new Map(), s = MONSTER_SETTINGS.separation;

@@ -14,7 +14,7 @@ const fail = (reason, message) => ({ ok: false, reason, message: message || MSG[
 // Hệ thống tháp thuần (không phụ thuộc Phaser): xây, nâng cấp, nhánh kỹ năng, bán, nhắm bắn, mũi tên.
 export class TowerSystem {
   constructor({ grid, world, economy, gates, hooks = {}, rng = Math.random, diff = NEUTRAL }) {
-    Object.assign(this, { grid, world, economy, gates, hooks, rng, diff }); this.mods = { damage: diff.towerDamageMul, fireRate: diff.towerRateMul }; this.buildTime = ECON.buildTime; this.towers = []; this.walls = []; this.projectiles = []; this.pool = []; this.nextId = 1; this.nextWallId = 1;
+    Object.assign(this, { grid, world, economy, gates, hooks, rng, diff }); world.towers = null; /* gán sau khi tạo mảng */ this.mods = { damage: diff.towerDamageMul, fireRate: diff.towerRateMul }; this.buildTime = ECON.buildTime; this.towers = []; world.towers = this.towers; world.towerFT = FT; this.walls = []; this.projectiles = []; this.pool = []; this.nextId = 1; this.nextWallId = 1;
     this.scratch = new FlowField(grid.width, grid.height); this.stats = { built: 0, walls: 0, damage: 0, refunded: 0 };
   }
   buildCost() { return this.diff.buildCost; } // giá cố định, không đổi theo số tháp hay thời gian
@@ -103,7 +103,7 @@ export class TowerSystem {
     const ms = this.world.monsters;
     for (const t of this.towers) {
       if (t.state === 'building') { t.buildT -= dt; if (t.buildT <= 0) { t.state = 'ready'; this.hooks.onBuilt?.(t); } continue; }
-      const s = t.stats, cx = t.x + FT / 2, cy = t.y + FT / 2; t.cd -= dt;
+      const s = t.stats, cx = t.x + FT / 2, cy = t.y + FT / 2, dbf = this.world.runtime?.towerDebuff(t) ?? null; t.cd -= dt * (dbf ? dbf.rate : 1); t.dbf = dbf; // dbf: hiệu ứng slime V2 (làm ảo giác/khóa/làm chậm tốc bắn) — null với slime cũ
       const near = []; for (const m of ms) if (!m.dying) { const d = Math.hypot(m.x - cx, m.y - cy); if (d <= s.range) near.push([d, m]); }
       if (!near.length) continue; near.sort((a, b) => a[0] - b[0]);
       const tgt = near[0][1]; t.angle = Math.atan2(tgt.y - cy, tgt.x - cx);
@@ -124,15 +124,17 @@ export class TowerSystem {
     }
   }
   shoot(t, target, offset) {
-    const s = t.stats, p = this.pool.pop() || {}, a = Math.atan2(target.y - (t.y + FT / 2), target.x - (t.x + FT / 2)) + offset, crit = this.rng() < s.critChance;
+    const s = t.stats, dbf = t.dbf, lock = !!dbf?.lock, p = this.pool.pop() || {}, a = Math.atan2(target.y - (t.y + FT / 2), target.x - (t.x + FT / 2)) + offset, crit = this.rng() < s.critChance;
     Object.assign(p, { x: t.x + FT / 2, y: t.y + 0.15, vx: Math.cos(a) * s.arrowSpeed, vy: Math.sin(a) * s.arrowSpeed, speed: s.arrowSpeed, target, tx: target.x, ty: target.y, age: 0, crit, tower: t, view: null,
       dmg: s.damage * (crit ? s.critMult : 1), kind: s.kind,
-      slow: s.slowPct ? { pct: s.slowPct, dur: s.slowDur, radius: s.slowRadius } : null,
-      burn: s.burnDps ? { burnDps: s.burnDps, burnDur: s.burnDur, spreadChance: s.spreadChance, spreadRadius: s.spreadRadius } : null });
+      miss: !!dbf && dbf.miss > 0 && this.rng() < dbf.miss,
+      slow: s.slowPct && !lock ? { pct: s.slowPct, dur: s.slowDur, radius: s.slowRadius } : null,
+      burn: s.burnDps && !lock ? { burnDps: s.burnDps, burnDur: s.burnDur, spreadChance: s.spreadChance, spreadRadius: s.spreadRadius } : null });
     this.projectiles.push(p); this.hooks.onProjSpawn?.(p);
   }
   hit(p) {
     const m = p.target; if (!m || !m.alive || m.dying) return; const w = this.world;
+    if (p.miss) { this.hooks.onMiss?.(p, m); return; } // bị ảo giác: đòn trượt
     this.stats.damage += Math.min(p.dmg, m.hp); const hpBefore = m.hp;
     if (w.damage(m, p.dmg) && p.tower) p.tower.kills++;
     if (hpBefore > 0 && !m.dying) { // đòn không giết chết mới áp hiệu ứng

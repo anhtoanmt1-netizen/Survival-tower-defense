@@ -18,7 +18,7 @@ let hp = diff.playerHp, inv = 0, leaks = 0; const p = { x: m.playerStart.x + 0.5
 const this_dead = () => p.dead;
 const world = new MonsterWorld(grid, { onKill: (mo) => eco.add(mo.reward) }, rng, { contactDamage: diff.contactDamage });
 const gate = m.gates[+(process.argv[5] || 0)], ts = new TowerSystem({ grid, world, economy: eco, gates: [gate], rng, diff });
-const dir = new WaveDirector({ grid, world, gates: [gate], rng, diff, maxActive: diff.maxActive, settings: { ...WAVE_SETTINGS, firstWaveDelay: diff.firstWaveDelay, interval: diff.waveInterval, spawnPerSecond: diff.spawnPerSecond } });
+const dir = new WaveDirector({ grid, world, gates: [gate], rng, diff, v2: !!process.env.V2, /* V2=1: dùng Slime V2 (wave ≤30) */ maxActive: diff.maxActive, settings: { ...WAVE_SETTINGS, firstWaveDelay: diff.firstWaveDelay, interval: diff.waveInterval, spawnPerSecond: diff.spawnPerSecond } });
 const path = findPath(grid, gate.x, gate.y, m.playerStart.x, m.playerStart.y);
 const cands = []; // ô quanh đường đi, cách người chơi 4..16 ô
 for (let i = 0; i < path.length; i++) { const d = path.length - i; if (d < 4 || d > 18) continue; for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { const x = path[i].x + dx, y = path[i].y + dy; if (Math.abs(dx) + Math.abs(dy) >= 2 && !cands.some((c) => c.x === x && c.y === y)) cands.push({ x, y }); } }
@@ -38,7 +38,8 @@ const dt = 1 / 20; let t = 0, nextAct = 0, lastRep = 0, cleared = false;
 while (t < 3300 && !p.dead) {
   t += dt; inv = Math.max(0, inv - dt); dir.update(dt); world.update(dt, [p]); ts.update(dt); eco.update(dt, ts.towers.length, ts.buildCost());
   if (t >= nextAct) { nextAct = t + 0.5; act(); }
-  if (dir.wave >= 100 && dir.queue.length === 0 && world.active === 0) { cleared = true; break; }
-  if (dir.wave >= lastRep + 10 || (dir.wave === 1 && lastRep === 0)) { lastRep = dir.wave; const lv = ts.towers.map((x) => x.level); console.log(`đợt ${dir.wave} t=${t | 0}s | HP ${hp} rò rỉ ${leaks} | vàng ${eco.gold} | tháp ${ts.towers.length} (LV TB ${(lv.reduce((a, b) => a + b, 0) / (lv.length || 1)).toFixed(1)}) | quái ${world.active}+${dir.queue.length}chờ | đã diệt ${world.kills}`); }
+  if (process.env.STOPWAVE && dir.wave > +process.env.STOPWAVE) { cleared = true; break; } // STOPWAVE=N: dừng cứng sau đợt N để so sánh
+  if (dir.wave >= (+process.env.STOPWAVE || 100) && dir.queue.length === 0 && world.active === 0) { cleared = true; break; } // STOPWAVE=30: dừng sớm để so sánh
+  if (dir.wave >= lastRep + (+process.env.REPEVERY || 10) || (dir.wave === 1 && lastRep === 0)) { lastRep = dir.wave; const lv = ts.towers.map((x) => x.level); console.log(`đợt ${dir.wave} t=${t | 0}s | HP ${hp} rò rỉ ${leaks} | vàng ${eco.gold} | tháp ${ts.towers.length} (LV TB ${(lv.reduce((a, b) => a + b, 0) / (lv.length || 1)).toFixed(1)}) | quái ${world.active}+${dir.queue.length}chờ | đã diệt ${world.kills}`); }
 }
 console.log(cleared ? `THẮNG đợt 100 lúc ${t | 0}s` : p.dead ? `THUA ở đợt ${dir.wave} lúc ${t | 0}s (quái còn ${world.active}+${dir.queue.length})` : `hết thời gian ở đợt ${dir.wave}`);
